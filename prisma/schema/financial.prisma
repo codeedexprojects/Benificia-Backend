@@ -1,0 +1,131 @@
+// ════════════════════════════════════════════════════════════
+// prisma/schema/financial.prisma
+// MODULE 3 — Financial Fact Finding
+// ════════════════════════════════════════════════════════════
+
+model IncomeProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  salaryMonthly     Float    @default(0) @map("salary_monthly")
+  businessMonthly   Float    @default(0) @map("business_monthly")
+  passiveMonthly    Float    @default(0) @map("passive_monthly")
+  otherMonthly      Float    @default(0) @map("other_monthly")
+  totalMonthly      Float    @default(0) @map("total_monthly")
+  annualBonus       Float    @default(0) @map("annual_bonus")
+  expectedGrowthPct Float    @default(5) @map("expected_growth_pct")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("income_profiles")
+}
+
+model ExpenseProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Fixed
+  rentOrHomeLoanEmi Float @default(0) @map("rent_or_home_loan_emi")
+  vehicleLoanEmi    Float @default(0) @map("vehicle_loan_emi")
+  otherLoanEmis     Float @default(0) @map("other_loan_emis")
+  existingPremiums  Float @default(0) @map("existing_premiums")
+
+  // Variable
+  groceriesFood     Float @default(0) @map("groceries_food")
+  utilities         Float @default(0)
+  transport         Float @default(0)
+  medicalHealthcare Float @default(0) @map("medical_healthcare")
+
+  // Lifestyle
+  diningEntertainment Float @default(0) @map("dining_entertainment")
+  shopping            Float @default(0)
+  childrenEducation   Float @default(0) @map("children_education")
+  otherExpenses       Float @default(0) @map("other_expenses")
+
+  // Computed — stored for fast reads
+  // Recalculate and save whenever any field changes
+  totalMonthly    Float @default(0) @map("total_monthly")
+  monthlySurplus  Float @default(0) @map("monthly_surplus")
+  savingsRatioPct Float @default(0) @map("savings_ratio_pct")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("expense_profiles")
+}
+
+model AssetLiabilityProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  // Assets
+  cashSavings       Float @default(0) @map("cash_savings")
+  fixedDeposits     Float @default(0) @map("fixed_deposits")
+  mutualFundsStocks Float @default(0) @map("mutual_funds_stocks")
+  goldValue         Float @default(0) @map("gold_value")
+  realEstateValue   Float @default(0) @map("real_estate_value")
+  epfPpfBalance     Float @default(0) @map("epf_ppf_balance")
+  otherAssets       Float @default(0) @map("other_assets")
+  totalAssets       Float @default(0) @map("total_assets")
+
+  // Liabilities
+  homeLoanOutstanding     Float @default(0) @map("home_loan_outstanding")
+  vehicleLoanOutstanding  Float @default(0) @map("vehicle_loan_outstanding")
+  personalLoanOutstanding Float @default(0) @map("personal_loan_outstanding")
+  creditCardOutstanding   Float @default(0) @map("credit_card_outstanding")
+  otherLoans              Float @default(0) @map("other_loans")
+  totalLiabilities        Float @default(0) @map("total_liabilities")
+  netWorth                Float @default(0) @map("net_worth")
+
+  // Existing insurance — critical for gap analysis
+  existingLifeCover   Float @default(0) @map("existing_life_cover")
+  existingHealthCover Float @default(0) @map("existing_health_cover")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("asset_liability_profiles")
+}
+
+model FinancialGoal {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  type         GoalType
+  targetAmount Float    @map("target_amount")
+  targetYears  Int      @map("target_years")
+  currentSaved Float    @default(0) @map("current_saved")
+  priority     Int      @default(1)
+  isAchieved   Boolean  @default(false) @map("is_achieved")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("financial_goals")
+}
+
+model RiskProfile {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String       @unique @map("user_id") @db.Uuid
+  answers      Int[]
+  totalScore   Int          @map("total_score")
+  riskCategory RiskCategory @map("risk_category")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([riskCategory])
+  @@map("risk_profiles")
+}

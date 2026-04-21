@@ -1,0 +1,48 @@
+// ════════════════════════════════════════════════════════════
+// prisma/schema/recommendations.prisma
+// MODULE 6 — AI Recommendations
+// ════════════════════════════════════════════════════════════
+
+model AiRecommendation {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // AI response — stored as JSON, frontend reads directly
+  insuranceOutput  Json @map("insurance_output")
+  investmentOutput Json @map("investment_output")
+
+  // Payload sent to AI — stored for debugging and audit
+  fullPayloadSent Json @map("full_payload_sent")
+
+  // Metadata
+  status            RecommendationStatus @default(generating)
+  version           Int                  @default(1)
+  tieupCompanyCount Int                  @default(0) @map("tieup_company_count")
+  // How many tie-up companies were in the payload
+
+  generatedAt DateTime  @default(now()) @map("generated_at")
+  viewedAt    DateTime? @map("viewed_at")
+
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products RecommendationProduct[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([generatedAt])
+  @@map("ai_recommendations")
+}
+
+model RecommendationProduct {
+  id               String @id @default(uuid()) @db.Uuid
+  recommendationId String @map("recommendation_id") @db.Uuid
+  productId        String @map("product_id") @db.Uuid
+  rank             Int
+  matchReason      String @map("match_reason") @db.VarChar(500)
+
+  recommendation AiRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  product        InsuranceProduct  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([recommendationId])
+  @@index([productId])
+  @@map("recommendation_products")
+}

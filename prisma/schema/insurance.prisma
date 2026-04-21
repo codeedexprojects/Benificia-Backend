@@ -1,0 +1,145 @@
+// ════════════════════════════════════════════════════════════
+// prisma/schema/insurance.prisma
+// MODULE 4 & 5 — Insurance Companies, Products & Interests
+// ════════════════════════════════════════════════════════════
+
+model InsuranceCompany {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Company identity
+  name         String  @unique @db.VarChar(255)
+  logoS3Key    String? @map("logo_s3_key") @db.VarChar(500)
+  website      String? @db.VarChar(500)
+  contactEmail String? @map("contact_email") @db.VarChar(255)
+  contactPhone String? @map("contact_phone") @db.VarChar(20)
+
+  // Tie-up agreement details
+  agreementRef   String?   @map("agreement_ref") @db.VarChar(100)
+  tieupStartDate DateTime  @map("tieup_start_date") @db.Date
+  tieupEndDate   DateTime? @map("tieup_end_date") @db.Date
+  // null = no expiry
+
+  // Commercial
+  commissionPct Float? @map("commission_pct")
+
+  // Recommendation control — lower = higher priority in AI payload
+  priorityOrder Int @default(0) @map("priority_order")
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Internal
+  notes        String? @db.VarChar(1000)
+  addedByAdmin String  @map("added_by_admin") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  admin          AdminUser          @relation(fields: [addedByAdmin], references: [id])
+  products       InsuranceProduct[]
+  tieupAuditLogs TieupAuditLog[]
+
+  @@index([isActive])
+  @@index([priorityOrder])
+  @@index([tieupEndDate])
+  @@index([tieupStartDate])
+  @@map("insurance_companies")
+}
+
+model TieupAuditLog {
+  id        String @id @default(uuid()) @db.Uuid
+  companyId String @map("company_id") @db.Uuid
+  adminId   String @map("admin_id") @db.Uuid
+
+  // added / updated / activated / deactivated / expired / deleted
+  action    String @db.VarChar(100)
+  changes   Json?
+  // { before: {...}, after: {...} }
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company InsuranceCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  admin   AdminUser        @relation(fields: [adminId], references: [id])
+
+  @@index([companyId])
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("tieup_audit_logs")
+}
+
+model InsuranceProduct {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Link to tie-up company
+  companyId      String? @map("company_id") @db.Uuid
+  managedByAdmin String? @map("managed_by_admin") @db.Uuid
+
+  // Product identity
+  externalId String? @unique @map("external_id") @db.VarChar(255)
+  // ID from AI developer's scraper — for upserts
+  name       String  @db.VarChar(255)
+  type       InsuranceType
+
+  // Financials
+  premiumMonthly Float? @map("premium_monthly")
+  premiumAnnual  Float? @map("premium_annual")
+  coverageAmount Float? @map("coverage_amount")
+
+  // Eligibility
+  minAge          Int? @map("min_age")
+  maxAge          Int? @map("max_age")
+  policyTermYears Int? @map("policy_term_years")
+
+  // Quality indicators
+  claimSettlementRatio Float?           @map("claim_settlement_ratio")
+  riskLevel            ProductRiskLevel @default(moderate) @map("risk_level")
+
+  // Details stored as JSON — flexible for AI developer
+  benefits   Json @default("[]")
+  exclusions Json @default("[]")
+
+  // Source
+  sourceUrl      String?  @map("source_url") @db.VarChar(1000)
+  isTieupProduct Boolean  @default(false) @map("is_tieup_product")
+  // true  = from a company with active tie-up
+  // false = general market product for reference
+
+  // Status
+  isActive  Boolean   @default(true) @map("is_active")
+  scrapedAt DateTime? @map("scraped_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  company               InsuranceCompany?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  admin                 AdminUser?              @relation(fields: [managedByAdmin], references: [id], onDelete: SetNull)
+  interests             InsuranceInterest[]
+  recommendationProducts RecommendationProduct[]
+
+  @@index([companyId])
+  @@index([type])
+  @@index([isActive])
+  @@index([isTieupProduct])
+  @@index([riskLevel])
+  @@index([minAge, maxAge])
+  @@map("insurance_products")
+}
+
+model InsuranceInterest {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @map("user_id") @db.Uuid
+  productId    String         @map("product_id") @db.Uuid
+  status       InterestStatus @default(pending)
+  callbackTime String?        @map("callback_time") @db.VarChar(100)
+  notes        String?        @db.VarChar(500)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("insurance_interests")
+}

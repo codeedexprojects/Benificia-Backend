@@ -1,0 +1,116 @@
+// ════════════════════════════════════════════════════════════
+// prisma/schema/base.prisma
+// Generator, Datasource & All Enums
+// ════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ─────────────────────────────────────────────────
+
+enum ProfileStage {
+  auth_complete
+  kyc_in_progress
+  kyc_complete
+  personal_complete
+  fact_finding_income
+  fact_finding_expenses
+  fact_finding_assets
+  fact_finding_goals
+  fact_finding_risk
+  fact_finding_complete
+  recommendations_ready
+}
+
+enum KycStatus {
+  pending
+  verified
+  failed
+}
+
+enum KycMethod {
+  aadhaar_otp
+}
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+enum MaritalStatus {
+  single
+  married
+  divorced
+  widowed
+}
+
+enum IncomeType {
+  fixed
+  business
+  freelance
+}
+
+enum RiskCategory {
+  conservative
+  moderate
+  aggressive
+}
+
+enum GoalType {
+  emergency_fund
+  child_education
+  house_purchase
+  retirement
+  wealth_creation
+  debt_repayment
+}
+
+enum InsuranceType {
+  term
+  health
+  ulip
+  endowment
+  vehicle
+}
+
+enum ProductRiskLevel {
+  low
+  moderate
+  high
+}
+
+enum InterestStatus {
+  pending
+  contacted
+  converted
+  dropped
+}
+
+enum RecommendationStatus {
+  generating
+  ready
+  stale
+  failed
+}
+
+enum OtpPurpose {
+  registration
+  login
+  mfa
+  password_reset
+  aadhaar_kyc
+}
+
+enum AdminRole {
+  super_admin
+  product_admin
+  support_agent
+  analytics_viewer
+}
