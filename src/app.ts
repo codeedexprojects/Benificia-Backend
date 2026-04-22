@@ -31,8 +31,10 @@ app.get("/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" } });
 });
 
+import userRoutes from "./routes/user";
 import adminRoutes from "./routes/admin";
 
+app.use("/api/v1", userRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
 app.use(errorMiddleware);

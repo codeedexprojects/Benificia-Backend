@@ -29,7 +29,8 @@ const envSchema = z.object({
   AI_SERVER_URL: z.url(),
   AI_SERVER_API_KEY: z.string().min(1),
 
-  SUREPASS_API_KEY: z.string().min(1),
+  DEEPVUE_CLIENT_ID: z.string().min(1),
+  DEEPVUE_CLIENT_SECRET: z.string().min(1),
 });
 
 const parsed = envSchema.safeParse(process.env);

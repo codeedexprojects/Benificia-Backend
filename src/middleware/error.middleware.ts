@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { AppError } from "../utils/errors";
 import { logger } from "../utils/logger";
@@ -9,7 +10,28 @@ export function errorMiddleware(
   res: Response,
   _next: NextFunction,
 ): void {
+  // Zod validation — 400 with per-field messages, no logging
+  if (err instanceof ZodError) {
+    const errors = Object.fromEntries(
+      err.issues.map((issue) => [
+        issue.path.join(".") || "root",
+        issue.message,
+      ]),
+    );
+    res
+      .status(400)
+      .json({ success: false, message: "Validation failed", errors });
+    return;
+  }
+
+  // Operational errors (BadRequestError, UnauthorizedError, etc.)
   if (err instanceof AppError) {
+    if (!err.isOperational) {
+      logger.error("Non-operational AppError", {
+        message: err.message,
+        stack: err.stack,
+      });
+    }
     res.status(err.statusCode).json({ success: false, message: err.message });
     return;
   }
@@ -32,8 +54,10 @@ export function errorMiddleware(
     return;
   }
 
+  // Unexpected — log with stack trace, never leak details to client
   logger.error("Unhandled error", {
-    error: err instanceof Error ? err.message : "Unknown error",
+    error: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
   });
   res.status(500).json({ success: false, message: "Internal server error" });
 }
