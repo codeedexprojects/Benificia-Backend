@@ -5,6 +5,7 @@ import {
   verifyOtpSchema,
   requestPhotoUploadSchema,
   confirmPhotoUploadSchema,
+  personalDetailsSchema,
 } from "./user.schema";
 import { sendSuccess } from "../../utils/response";
 import { verifyUserRefreshToken } from "../../utils/jwt";
@@ -111,6 +112,25 @@ export class UserController {
   getPhotoUrl = async (req: Request, res: Response): Promise<void> => {
     const url = await this.userService.getPhotoUrl(req.user!.id);
     sendSuccess(res, { url });
+  };
+
+  // ── Profile completion ─────────────────────────────────────────
+
+  getProfile = async (req: Request, res: Response): Promise<void> => {
+    const result = await this.userService.getProfile(req.user!.id);
+    sendSuccess(res, result);
+  };
+
+  updatePersonalDetails = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const body = personalDetailsSchema.parse(req.body);
+    const result = await this.userService.updatePersonalDetails(
+      req.user!.id,
+      body,
+    );
+    sendSuccess(res, result);
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {

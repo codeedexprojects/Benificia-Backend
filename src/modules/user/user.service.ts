@@ -38,6 +38,9 @@ import {
   BadRequestError,
   NotFoundError,
 } from "../../utils/errors";
+import { getCompletionStatus } from "../../utils/profile-completion";
+import type { z } from "zod";
+import type { personalDetailsSchema } from "./user.schema";
 
 type RedisClient = ReturnType<typeof createClient>;
 
@@ -260,6 +263,61 @@ export class UserService {
     if (!profile?.photoS3Key)
       throw new NotFoundError("No profile photo uploaded");
     return generateDownloadUrl(this.s3, profile.photoS3Key);
+  }
+
+  // ── Profile completion ─────────────────────────────────────────
+
+  async getProfile(userId: string) {
+    const user = await this.userRepository.getFullProfile(userId);
+    if (!user) throw new NotFoundError("User not found");
+
+    let photoUrl: string | undefined;
+    if (user.profile?.photoS3Key) {
+      try {
+        photoUrl = await generateDownloadUrl(this.s3, user.profile.photoS3Key);
+      } catch {
+        // Non-critical — signed URL generation failure should not block the response
+      }
+    }
+
+    const { photoS3Key: _photoS3Key, ...profileRest } = user.profile ?? {};
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        profileStage: user.profileStage,
+        kycStatus: user.kycStatus,
+      },
+      profile: user.profile ? { ...profileRest, photoUrl } : null,
+      completion: getCompletionStatus(user.profileStage),
+    };
+  }
+
+  async updatePersonalDetails(
+    userId: string,
+    data: z.infer<typeof personalDetailsSchema>,
+  ): Promise<{ message: string; profileStage: string }> {
+    const user = await this.userRepository.getFullProfile(userId);
+    if (!user) throw new NotFoundError("User not found");
+
+    const allowedStages = ["kyc_complete", "personal_complete"] as const;
+    if (
+      !allowedStages.includes(
+        user.profileStage as (typeof allowedStages)[number],
+      )
+    ) {
+      throw new ForbiddenError(
+        "Please complete Aadhaar KYC verification before filling personal details",
+      );
+    }
+
+    await this.userRepository.updatePersonalDetails(userId, data);
+
+    return {
+      message: "Personal details saved successfully",
+      profileStage: "personal_complete",
+    };
   }
 
   async logout(userId: string, sessionId: string): Promise<void> {

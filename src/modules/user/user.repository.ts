@@ -159,4 +159,74 @@ export class UserRepository {
       select: { photoS3Key: true },
     });
   }
+
+  // ── Profile completion ────────────────────────────────────────
+
+  getFullProfile(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        profileStage: true,
+        kycStatus: true,
+        profile: {
+          select: {
+            fullName: true,
+            dateOfBirth: true,
+            gender: true,
+            photoS3Key: true,
+            addressLine1: true,
+            landmark: true,
+            locality: true,
+            city: true,
+            district: true,
+            state: true,
+            pincode: true,
+            country: true,
+            aadhaarLast4: true,
+            kycVerifiedAt: true,
+            maritalStatus: true,
+            numberOfDependents: true,
+            childrenAges: true,
+            occupation: true,
+            employer: true,
+            incomeType: true,
+            retirementAge: true,
+            isPrimaryEarner: true,
+            dependentsRelyOnIncome: true,
+          },
+        },
+      },
+    });
+  }
+
+  updatePersonalDetails(
+    userId: string,
+    data: {
+      maritalStatus: "single" | "married" | "divorced" | "widowed";
+      numberOfDependents: number;
+      childrenAges: number[];
+      occupation: string;
+      employer?: string;
+      incomeType: "fixed" | "business" | "freelance";
+      retirementAge: number;
+      isPrimaryEarner: boolean;
+      dependentsRelyOnIncome: boolean;
+    },
+  ) {
+    return this.prisma.$transaction([
+      this.prisma.userProfile.upsert({
+        where: { userId },
+        create: { userId, ...data },
+        update: data,
+        select: { userId: true },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { profileStage: "personal_complete" },
+        select: { profileStage: true },
+      }),
+    ]);
+  }
 }

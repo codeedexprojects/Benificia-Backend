@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import type { AadhaarKycData } from "../../utils/deepvue";
 
-export interface CompleteKycInput {
+export interface SaveKycDataInput {
   kycData: AadhaarKycData;
   photoS3Key?: string;
 }
@@ -34,7 +34,31 @@ export class KycRepository {
     });
   }
 
-  async completeKyc(userId: string, input: CompleteKycInput): Promise<void> {
+  async getProfile(userId: string) {
+    return this.db.userProfile.findUnique({
+      where: { userId },
+      select: {
+        fullName: true,
+        dateOfBirth: true,
+        gender: true,
+        photoS3Key: true,
+        addressLine1: true,
+        landmark: true,
+        locality: true,
+        city: true,
+        district: true,
+        state: true,
+        pincode: true,
+        country: true,
+        aadhaarLast4: true,
+        kycMethod: true,
+        kycVerifiedAt: true,
+      },
+    });
+  }
+
+  // Saves Aadhaar data + marks kycStatus=verified + profileStage=kyc_in_progress
+  async saveKycData(userId: string, input: SaveKycDataInput): Promise<void> {
     const { kycData, photoS3Key } = input;
     const now = new Date();
 
@@ -45,7 +69,7 @@ export class KycRepository {
           userId,
           fullName: kycData.fullName,
           dateOfBirth: kycData.dateOfBirth,
-          gender: kycData.gender ? mapGender(kycData.gender) : undefined,
+          gender: kycData.gender,
           photoS3Key,
           addressLine1: kycData.addressLine1,
           landmark: kycData.landmark,
@@ -61,7 +85,7 @@ export class KycRepository {
         update: {
           fullName: kycData.fullName,
           dateOfBirth: kycData.dateOfBirth,
-          gender: kycData.gender ? mapGender(kycData.gender) : undefined,
+          gender: kycData.gender,
           photoS3Key,
           addressLine1: kycData.addressLine1,
           landmark: kycData.landmark,
@@ -79,10 +103,18 @@ export class KycRepository {
         where: { id: userId },
         data: {
           kycStatus: "verified",
-          profileStage: "kyc_complete",
+          profileStage: "kyc_in_progress",
         },
       }),
     ]);
+  }
+
+  // User has reviewed the auto-filled data and confirmed — advance to kyc_complete
+  async confirmKyc(userId: string): Promise<void> {
+    await this.db.user.update({
+      where: { id: userId },
+      data: { profileStage: "kyc_complete" },
+    });
   }
 
   async createConsent(input: CreateConsentInput): Promise<void> {
@@ -110,8 +142,4 @@ export class KycRepository {
       },
     });
   }
-}
-
-function mapGender(g: "male" | "female" | "other") {
-  return g as "male" | "female" | "other" | "prefer_not_to_say";
 }
