@@ -24,6 +24,7 @@ export class KycController {
   /**
    * POST /api/v1/kyc/verify-otp
    * Body: { otp }
+   * Returns auto-filled Aadhaar profile data for user review.
    */
   verifyOtp = async (req: Request, res: Response): Promise<void> => {
     const body = verifyOtpSchema.parse(req.body);
@@ -33,6 +34,16 @@ export class KycController {
       req.ip,
       req.headers["user-agent"],
     );
+    sendSuccess(res, result);
+  };
+
+  /**
+   * POST /api/v1/kyc/confirm
+   * User has reviewed the auto-filled data and confirms it.
+   * Advances profileStage → kyc_complete.
+   */
+  confirmKyc = async (req: Request, res: Response): Promise<void> => {
+    const result = await this.kycService.confirmKyc(req.user!.id);
     sendSuccess(res, result);
   };
 }

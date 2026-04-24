@@ -1,16 +1,16 @@
 import type { createClient } from "redis";
 import type { S3Client } from "@aws-sdk/client-s3";
-
-type RedisClient = ReturnType<typeof createClient>;
 import type { KycRepository } from "./kyc.repository";
 import {
   sendAadhaarOtp,
   verifyAadhaarOtp,
   kycRefKey,
 } from "../../utils/deepvue";
-import { uploadBuffer } from "../../utils/s3";
+import { uploadBuffer, generateDownloadUrl } from "../../utils/s3";
 import { BadRequestError, ForbiddenError } from "../../utils/errors";
 import { logger } from "../../utils/logger";
+
+type RedisClient = ReturnType<typeof createClient>;
 
 const AADHAAR_PHOTO_CONTENT_TYPE = "image/jpeg";
 
@@ -28,14 +28,13 @@ export class KycService {
     userId: string,
     aadhaarNumber: string,
     ipAddress?: string,
-    userAgent?: string,
+    _userAgent?: string,
   ): Promise<{ message: string }> {
     const user = await this.kycRepository.findUserKycStatus(userId);
-    if (user?.kycStatus === "verified") {
-      throw new ForbiddenError("KYC is already verified");
+    if (user?.profileStage === "kyc_complete") {
+      throw new ForbiddenError("Aadhaar verification is already complete");
     }
 
-    // Don't expose if OTP is already pending — idempotent re-send is fine
     let referenceId: string;
     try {
       referenceId = await sendAadhaarOtp(this.redis, userId, aadhaarNumber);
@@ -68,10 +67,28 @@ export class KycService {
     otp: string,
     ipAddress?: string,
     userAgent?: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{
+    message: string;
+    profile: {
+      fullName?: string;
+      dateOfBirth?: Date;
+      gender?: string;
+      aadhaarLast4?: string;
+      address: {
+        addressLine1?: string;
+        landmark?: string;
+        locality?: string;
+        city?: string;
+        district?: string;
+        state?: string;
+        pincode?: string;
+      };
+      photoUrl?: string;
+    };
+  }> {
     const user = await this.kycRepository.findUserKycStatus(userId);
-    if (user?.kycStatus === "verified") {
-      throw new ForbiddenError("KYC is already verified");
+    if (user?.profileStage === "kyc_complete") {
+      throw new ForbiddenError("Aadhaar verification is already complete");
     }
 
     const pendingRef = await this.redis.get(kycRefKey(userId));
@@ -96,7 +113,6 @@ export class KycService {
       throw err;
     }
 
-    // Upload Aadhaar photo to S3 if Deepvue returned one
     let photoS3Key: string | undefined;
     if (kycData.photo) {
       photoS3Key = `profiles/${userId}/aadhaar_photo.jpg`;
@@ -108,7 +124,6 @@ export class KycService {
           AADHAAR_PHOTO_CONTENT_TYPE,
         );
       } catch (err) {
-        // Photo upload failure must not block KYC completion
         logger.error("Failed to upload Aadhaar photo", {
           userId,
           error: err instanceof Error ? err.message : err,
@@ -118,7 +133,7 @@ export class KycService {
     }
 
     await Promise.all([
-      this.kycRepository.completeKyc(userId, { kycData, photoS3Key }),
+      this.kycRepository.saveKycData(userId, { kycData, photoS3Key }),
       this.kycRepository.createConsent({
         userId,
         consentType: "aadhaar_kyc",
@@ -130,12 +145,57 @@ export class KycService {
 
     await this.kycRepository.createAuditLog({
       userId,
-      action: "kyc_verified",
+      action: "otp_verified",
       method: "aadhaar_otp",
       ipAddress,
       outcome: "success",
     });
 
-    return { message: "KYC verification successful" };
+    let photoUrl: string | undefined;
+    if (photoS3Key) {
+      try {
+        photoUrl = await generateDownloadUrl(this.s3, photoS3Key);
+      } catch {
+        // Non-critical
+      }
+    }
+
+    return {
+      message:
+        "Verification successful. Please review your details and confirm.",
+      profile: {
+        fullName: kycData.fullName,
+        dateOfBirth: kycData.dateOfBirth,
+        gender: kycData.gender,
+        aadhaarLast4: kycData.aadhaarLast4,
+        address: {
+          addressLine1: kycData.addressLine1,
+          landmark: kycData.landmark,
+          locality: kycData.locality,
+          city: kycData.city,
+          district: kycData.district,
+          state: kycData.state,
+          pincode: kycData.pincode,
+        },
+        photoUrl,
+      },
+    };
+  }
+
+  async confirmKyc(userId: string): Promise<{ message: string }> {
+    const user = await this.kycRepository.findUserKycStatus(userId);
+
+    if (user?.profileStage === "kyc_complete") {
+      throw new ForbiddenError("Aadhaar verification is already complete");
+    }
+    if (user?.kycStatus !== "verified") {
+      throw new BadRequestError(
+        "Please complete Aadhaar OTP verification before confirming",
+      );
+    }
+
+    await this.kycRepository.confirmKyc(userId);
+
+    return { message: "KYC confirmed successfully" };
   }
 }

@@ -9,6 +9,8 @@ export function kycRoutes(controller: KycController): Router {
 
   router.post("/send-otp", controller.sendOtp);
   router.post("/verify-otp", controller.verifyOtp);
+  router.post("/confirm", controller.confirmKyc);
+  router.post("/confirm", controller.confirmKyc);
 
   return router;
 }

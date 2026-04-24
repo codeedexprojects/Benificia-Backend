@@ -1,12 +1,12 @@
 {
   "info": {
     "name": "Benificia API Collection",
-    "description": "API Documentation for Benificia API with post execution scripts to save tokens.",
+    "description": "Comprehensive API Documentation for Benificia API.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "User",
+      "name": "User APIs",
       "item": [
         {
           "name": "Auth",
@@ -23,12 +23,12 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+919876543210\"\n}"
+                  "raw": "{\n  \"email\": \"user@example.com\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/auth/send-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/send-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "auth", "send-otp"]
+                  "path": ["api", "v1", "auth", "send-otp"]
                 }
               }
             },
@@ -39,15 +39,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status code is 200\", function () {",
-                      "    pm.response.to.have.status(200);",
-                      "});",
-                      "",
-                      "var jsonData = pm.response.json();",
-                      "if (jsonData && jsonData.data && jsonData.data.token) {",
-                      "    pm.environment.set(\"userAccessToken\", jsonData.data.token);",
-                      "    console.log(\"User Access token saved to environment.\");",
-                      "}"
+                      "pm.test(\"Status code is 200 or 201\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
                     ],
                     "type": "text/javascript"
                   }
@@ -63,75 +57,77 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}"
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/auth/verify-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/verify-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "auth", "verify-otp"]
+                  "path": ["api", "v1", "auth", "verify-otp"]
                 }
               }
             },
             {
               "name": "Refresh Token",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/auth/refresh",
+                  "raw": "{{baseUrl}}/api/v1/auth/refresh",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "auth", "refresh"]
+                  "path": ["api", "v1", "auth", "refresh"]
                 }
               }
             },
             {
               "name": "Logout",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/auth/logout",
+                  "raw": "{{baseUrl}}/api/v1/auth/logout",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "auth", "logout"]
+                  "path": ["api", "v1", "auth", "logout"]
                 }
               }
             }
           ]
         },
         {
-          "name": "User Profile",
+          "name": "Profile",
           "item": [
+            {
+              "name": "Get My Profile",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/profile/me",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "profile", "me"]
+                }
+              }
+            },
+            {
+              "name": "Update Personal Details",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"maritalStatus\": \"single\",\n  \"numberOfDependents\": 0,\n  \"childrenAges\": [],\n  \"occupation\": \"Software Engineer\",\n  \"employer\": \"Tech Corp\",\n  \"incomeType\": \"fixed\",\n  \"retirementAge\": 60,\n  \"isPrimaryEarner\": true,\n  \"dependentsRelyOnIncome\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/profile/personal",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "profile", "personal"]
+                }
+              }
+            },
             {
               "name": "Request Photo Upload URL",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "header": [
                   {
@@ -141,28 +137,18 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"filename\": \"photo.jpg\",\n  \"contentType\": \"image/jpeg\"\n}"
+                  "raw": "{\n  \"contentType\": \"image/jpeg\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/photo/upload-url",
+                  "raw": "{{baseUrl}}/api/v1/profile/photo/upload-url",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "photo", "upload-url"]
+                  "path": ["api", "v1", "profile", "photo", "upload-url"]
                 }
               }
             },
             {
               "name": "Confirm Photo Upload",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "PATCH",
                 "header": [
                   {
@@ -175,30 +161,20 @@
                   "raw": "{\n  \"key\": \"uploaded_file_key\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/photo",
+                  "raw": "{{baseUrl}}/api/v1/profile/photo",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "photo"]
+                  "path": ["api", "v1", "profile", "photo"]
                 }
               }
             },
             {
               "name": "Get Photo URL",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "GET",
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/photo",
+                  "raw": "{{baseUrl}}/api/v1/profile/photo",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "photo"]
+                  "path": ["api", "v1", "profile", "photo"]
                 }
               }
             }
@@ -210,16 +186,6 @@
             {
               "name": "Send Aadhaar OTP",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "header": [
                   {
@@ -229,28 +195,18 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"aadhaarNumber\": \"123456789012\"\n}"
+                  "raw": "{\n  \"aadhaarNumber\": \"123456789012\",\n  \"consentGiven\": true\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/kyc/send-otp",
+                  "raw": "{{baseUrl}}/api/v1/kyc/send-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "kyc", "send-otp"]
+                  "path": ["api", "v1", "kyc", "send-otp"]
                 }
               }
             },
             {
               "name": "Verify Aadhaar OTP",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "header": [
                   {
@@ -260,12 +216,33 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"clientId\": \"client_id_from_send_otp\",\n  \"otp\": \"123456\"\n}"
+                  "raw": "{\n  \"otp\": \"123456\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/kyc/verify-otp",
+                  "raw": "{{baseUrl}}/api/v1/kyc/verify-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "kyc", "verify-otp"]
+                  "path": ["api", "v1", "kyc", "verify-otp"]
+                }
+              }
+            },
+            {
+              "name": "Confirm KYC Details",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/kyc/confirm",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "kyc", "confirm"]
                 }
               }
             }
@@ -295,16 +272,6 @@
                 }
               ],
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "header": [
                   {
@@ -317,25 +284,15 @@
                   "raw": "{\n  \"filename\": \"document.pdf\",\n  \"contentType\": \"application/pdf\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/upload/url",
+                  "raw": "{{baseUrl}}/api/v1/upload/url",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "upload", "url"]
+                  "path": ["api", "v1", "upload", "url"]
                 }
               }
             },
             {
               "name": "Get Download URL",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "GET",
                 "header": [
                   {
@@ -348,25 +305,15 @@
                   "raw": "{\n  \"key\": \"file_key\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/upload/url",
+                  "raw": "{{baseUrl}}/api/v1/upload/url",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "upload", "url"]
+                  "path": ["api", "v1", "upload", "url"]
                 }
               }
             },
             {
               "name": "Delete File",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{userAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "DELETE",
                 "header": [
                   {
@@ -379,9 +326,9 @@
                   "raw": "{\n  \"key\": \"file_key\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/user/upload/url",
+                  "raw": "{{baseUrl}}/api/v1/upload/url",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "user", "upload", "url"]
+                  "path": ["api", "v1", "upload", "url"]
                 }
               }
             }
@@ -390,7 +337,7 @@
       ]
     },
     {
-      "name": "Admin",
+      "name": "Admin APIs",
       "item": [
         {
           "name": "Auth",
@@ -407,7 +354,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@benificia.com\"\n}"
+                  "raw": "{\n  \"email\": \"admin@benificia.com\",\n  \"password\": \"secure_password\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/admin/auth/login",
@@ -425,13 +372,7 @@
                     "exec": [
                       "pm.test(\"Status code is 200\", function () {",
                       "    pm.response.to.have.status(200);",
-                      "});",
-                      "",
-                      "var jsonData = pm.response.json();",
-                      "if (jsonData && jsonData.data && jsonData.data.token) {",
-                      "    pm.environment.set(\"adminAccessToken\", jsonData.data.token);",
-                      "    console.log(\"Admin Access token saved to environment.\");",
-                      "}"
+                      "});"
                     ],
                     "type": "text/javascript"
                   }
@@ -459,16 +400,6 @@
             {
               "name": "Admin Refresh Token",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/admin/auth/refresh",
@@ -480,16 +411,6 @@
             {
               "name": "Admin Logout",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{adminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "POST",
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/admin/auth/logout",
