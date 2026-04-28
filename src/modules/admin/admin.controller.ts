@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 import type { AdminService } from "./admin.service";
-import { adminLoginSchema, adminVerifyOtpSchema } from "./admin.schema";
+import {
+  adminLoginSchema,
+  adminVerifyOtpSchema,
+  listUsersSchema,
+  blockUserSchema,
+} from "./admin.schema";
 import { sendSuccess } from "../../utils/response";
 import { verifyAdminRefreshToken } from "../../utils/jwt";
 import { JWT_COOKIE_OPTIONS } from "../../config/constants";
@@ -60,6 +65,46 @@ export class AdminController {
       });
 
     sendSuccess(res, { message: "Session refreshed" });
+  };
+
+  // ── User management ───────────────────────────────────────────
+
+  listUsers = async (req: Request, res: Response): Promise<void> => {
+    const query = listUsersSchema.parse(req.query);
+    const result = await this.adminService.listUsers(query);
+    sendSuccess(res, result.users, 200, {
+      total: result.meta.total,
+      page: result.meta.page,
+      limit: result.meta.limit,
+    });
+  };
+
+  getUserDetail = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.params["id"] as string;
+    const result = await this.adminService.getUserDetail(userId);
+    sendSuccess(res, result);
+  };
+
+  blockUser = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.params["id"] as string;
+    const body = blockUserSchema.parse(req.body);
+    const result = await this.adminService.blockUser(
+      userId,
+      req.admin!.id,
+      body.reason,
+      req.ip,
+    );
+    sendSuccess(res, result);
+  };
+
+  unblockUser = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.params["id"] as string;
+    const result = await this.adminService.unblockUser(
+      userId,
+      req.admin!.id,
+      req.ip,
+    );
+    sendSuccess(res, result);
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {

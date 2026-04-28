@@ -6,7 +6,6 @@
 model User {
   id           String       @id @default(uuid()) @db.Uuid
   email        String       @unique @db.VarChar(255)
-  passwordHash String       @map("password_hash") @db.VarChar(255)
   profileStage ProfileStage @default(auth_complete) @map("profile_stage")
   kycStatus    KycStatus    @default(pending) @map("kyc_status")
   isActive     Boolean      @default(true) @map("is_active")

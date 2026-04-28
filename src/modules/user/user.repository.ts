@@ -20,9 +20,9 @@ export class UserRepository {
     });
   }
 
-  createUser(email: string, passwordHash: string) {
+  createUser(email: string) {
     return this.prisma.user.create({
-      data: { email, passwordHash },
+      data: { email },
       select: {
         id: true,
         email: true,
