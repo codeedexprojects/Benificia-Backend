@@ -115,4 +115,147 @@ export class AdminRepository {
       select: { id: true },
     });
   }
+
+  // ── User management ──────────────────────────────────────────
+
+  listUsers(params: {
+    skip: number;
+    take: number;
+    search?: string;
+    kycStatus?: "pending" | "verified" | "failed";
+    isActive?: boolean;
+    profileStage?: string;
+  }) {
+    const where = {
+      deletedAt: null,
+      ...(params.search && {
+        email: { contains: params.search, mode: "insensitive" as const },
+      }),
+      ...(params.kycStatus && { kycStatus: params.kycStatus }),
+      ...(params.isActive !== undefined && { isActive: params.isActive }),
+      ...(params.profileStage && {
+        profileStage: params.profileStage as never,
+      }),
+    };
+
+    return Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip: params.skip,
+        take: params.take,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          email: true,
+          profileStage: true,
+          kycStatus: true,
+          isActive: true,
+          createdAt: true,
+          profile: {
+            select: { fullName: true, city: true, state: true },
+          },
+        },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+  }
+
+  getUserDetail(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        profileStage: true,
+        kycStatus: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+        profile: true,
+        incomeProfile: true,
+        expenseProfile: true,
+        assetLiabilityProfile: true,
+        financialGoals: { orderBy: { priority: "asc" } },
+        riskProfile: true,
+        kyc_consents: { orderBy: { consentedAt: "desc" }, take: 5 },
+        kycAuditLogs: { orderBy: { createdAt: "desc" }, take: 10 },
+        aiRecommendations: {
+          orderBy: { generatedAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            insuranceOutput: true,
+            investmentOutput: true,
+            generatedAt: true,
+            viewedAt: true,
+          },
+        },
+        insuranceInterests: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            status: true,
+            callbackTime: true,
+            notes: true,
+            createdAt: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                coverageAmount: true,
+              },
+            },
+          },
+        },
+        authSessions: {
+          where: { isRevoked: false, expiresAt: { gt: new Date() } },
+          select: {
+            id: true,
+            createdAt: true,
+            ipAddress: true,
+            userAgent: true,
+          },
+        },
+      },
+    });
+  }
+
+  setUserActive(userId: string, isActive: boolean) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: { id: true, email: true, isActive: true },
+    });
+  }
+
+  revokeAllUserSessions(userId: string) {
+    return this.prisma.authSession.updateMany({
+      where: { userId, isRevoked: false },
+      data: { isRevoked: true },
+    });
+  }
+
+  createAdminAuditLog(data: {
+    adminId: string;
+    action: string;
+    targetTable: string;
+    targetId: string;
+    ipAddress?: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    return this.prisma.adminAuditLog.create({
+      data: {
+        adminId: data.adminId,
+        action: data.action,
+        targetTable: data.targetTable,
+        targetId: data.targetId,
+        ipAddress: data.ipAddress,
+        metadata: (data.metadata ?? undefined) as never,
+      },
+      select: { id: true },
+    });
+  }
 }

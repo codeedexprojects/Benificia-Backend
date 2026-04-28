@@ -9,7 +9,11 @@
     "build": "tsc",
     "test": "jest",
     "lint": "eslint \"src/**/*.ts\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "lint-staged": {
     "*.ts": [

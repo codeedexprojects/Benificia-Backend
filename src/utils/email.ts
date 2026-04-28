@@ -28,6 +28,15 @@ export async function sendEmail(
 ): Promise<void> {
   const toAddresses = Array.isArray(input.to) ? input.to : [input.to];
 
+  if (env.NODE_ENV === "development") {
+    console.log("================ MOCK EMAIL ================");
+    console.log(`To: ${toAddresses.join(", ")}`);
+    console.log(`Subject: ${input.subject}`);
+    console.log(`Body (HTML/Text):\n${input.text || input.html}`);
+    console.log("============================================");
+    return;
+  }
+
   await ses.send(
     new SendEmailCommand({
       Source: env.AWS_SES_FROM_EMAIL,

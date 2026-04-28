@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma, redis, ses } from "../../container";
 import { AdminContainer } from "../../modules/admin/admin.container";
 import { authRateLimit } from "../../middleware/rateLimit.middleware";
+import { usersRoutes } from "./users.routes";
 
 const router = Router();
 const { adminController } = new AdminContainer(prisma, redis, ses);
@@ -11,5 +12,8 @@ router.post("/auth/login", authRateLimit, adminController.login);
 router.post("/auth/verify-otp", authRateLimit, adminController.verifyOtp);
 router.post("/auth/refresh", adminController.refresh);
 router.post("/auth/logout", adminController.logout);
+
+// User management
+router.use("/users", usersRoutes(adminController));
 
 export default router;

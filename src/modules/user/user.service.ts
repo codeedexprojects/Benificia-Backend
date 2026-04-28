@@ -4,12 +4,7 @@ import type { SESClient } from "@aws-sdk/client-ses";
 import type { createClient } from "redis";
 import { OtpPurpose, type ProfileStage } from "@prisma/client";
 import type { UserRepository } from "./user.repository";
-import {
-  hashPassword,
-  hashOtp,
-  compareOtp,
-  hashToken,
-} from "../../utils/encryption";
+import { hashOtp, compareOtp, hashToken } from "../../utils/encryption";
 import {
   generateUploadUrl,
   generateDownloadUrl,
@@ -148,12 +143,8 @@ export class UserService {
 
     if (isNewUser) {
       // Create account — handle concurrent registration race condition via unique constraint
-      const passwordHash = await hashPassword(randomUUID()); // placeholder, not used for login
       try {
-        const created = await this.userRepository.createUser(
-          email,
-          passwordHash,
-        );
+        const created = await this.userRepository.createUser(email);
         userId = created.id;
         profileStage = created.profileStage;
       } catch {

@@ -27,7 +27,10 @@ import {
   UnauthorizedError,
   ForbiddenError,
   BadRequestError,
+  NotFoundError,
 } from "../../utils/errors";
+import type { z } from "zod";
+import type { listUsersSchema } from "./admin.schema";
 
 type RedisClient = ReturnType<typeof createClient>;
 
@@ -173,6 +176,84 @@ export class AdminService {
 
     // 5. Issue new tokens and persist
     return this.issueTokens(session);
+  }
+
+  // ── User management ───────────────────────────────────────────
+
+  async listUsers(query: z.infer<typeof listUsersSchema>) {
+    const { page, limit, search, kycStatus, isActive, profileStage } = query;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await this.adminRepository.listUsers({
+      skip,
+      take: limit,
+      search,
+      kycStatus,
+      isActive,
+      profileStage,
+    });
+
+    return {
+      users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getUserDetail(userId: string) {
+    const user = await this.adminRepository.getUserDetail(userId);
+    if (!user) throw new NotFoundError("User not found");
+    return user;
+  }
+
+  async blockUser(
+    userId: string,
+    adminId: string,
+    reason?: string,
+    ipAddress?: string,
+  ) {
+    const user = await this.adminRepository.getUserDetail(userId);
+    if (!user) throw new NotFoundError("User not found");
+    if (!user.isActive) throw new BadRequestError("User is already blocked");
+
+    await Promise.all([
+      this.adminRepository.setUserActive(userId, false),
+      this.adminRepository.revokeAllUserSessions(userId),
+      this.adminRepository.createAdminAuditLog({
+        adminId,
+        action: "user_blocked",
+        targetTable: "users",
+        targetId: userId,
+        ipAddress,
+        metadata: { reason: reason ?? null, email: user.email },
+      }),
+    ]);
+
+    return { message: `User ${user.email} has been blocked` };
+  }
+
+  async unblockUser(userId: string, adminId: string, ipAddress?: string) {
+    const user = await this.adminRepository.getUserDetail(userId);
+    if (!user) throw new NotFoundError("User not found");
+    if (user.isActive) throw new BadRequestError("User is already active");
+
+    await Promise.all([
+      this.adminRepository.setUserActive(userId, true),
+      this.adminRepository.createAdminAuditLog({
+        adminId,
+        action: "user_unblocked",
+        targetTable: "users",
+        targetId: userId,
+        ipAddress,
+        metadata: { email: user.email },
+      }),
+    ]);
+
+    return { message: `User ${user.email} has been unblocked` };
   }
 
   async logout(adminId: string, sessionId: string): Promise<void> {
