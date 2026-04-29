@@ -15,8 +15,6 @@ datasource db {
 
 enum ProfileStage {
   auth_complete
-  kyc_in_progress
-  kyc_complete
   personal_complete
   fact_finding_income
   fact_finding_expenses
@@ -25,16 +23,6 @@ enum ProfileStage {
   fact_finding_risk
   fact_finding_complete
   recommendations_ready
-}
-
-enum KycStatus {
-  pending
-  verified
-  failed
-}
-
-enum KycMethod {
-  aadhaar_otp
 }
 
 enum Gender {
@@ -105,7 +93,6 @@ enum OtpPurpose {
   login
   mfa
   password_reset
-  aadhaar_kyc
 }
 
 enum OtpChannel {

@@ -145,7 +145,6 @@ export class AdminRepository {
     skip: number;
     take: number;
     search?: string;
-    kycStatus?: "pending" | "verified" | "failed";
     isActive?: boolean;
     profileStage?: string;
   }) {
@@ -154,7 +153,6 @@ export class AdminRepository {
       ...(params.search && {
         email: { contains: params.search, mode: "insensitive" as const },
       }),
-      ...(params.kycStatus && { kycStatus: params.kycStatus }),
       ...(params.isActive !== undefined && { isActive: params.isActive }),
       ...(params.profileStage && {
         profileStage: params.profileStage as never,
@@ -171,7 +169,6 @@ export class AdminRepository {
           id: true,
           email: true,
           profileStage: true,
-          kycStatus: true,
           isActive: true,
           createdAt: true,
           profile: {
@@ -190,7 +187,6 @@ export class AdminRepository {
         id: true,
         email: true,
         profileStage: true,
-        kycStatus: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -201,8 +197,6 @@ export class AdminRepository {
         assetLiabilityProfile: true,
         financialGoals: { orderBy: { priority: "asc" } },
         riskProfile: true,
-        kyc_consents: { orderBy: { consentedAt: "desc" }, take: 5 },
-        kycAuditLogs: { orderBy: { createdAt: "desc" }, take: 10 },
         aiRecommendations: {
           orderBy: { generatedAt: "desc" },
           take: 1,

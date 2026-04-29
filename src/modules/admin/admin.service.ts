@@ -195,14 +195,13 @@ export class AdminService {
   // ── User management ───────────────────────────────────────────
 
   async listUsers(query: z.infer<typeof listUsersSchema>) {
-    const { page, limit, search, kycStatus, isActive, profileStage } = query;
+    const { page, limit, search, isActive, profileStage } = query;
     const skip = (page - 1) * limit;
 
     const [users, total] = await this.adminRepository.listUsers({
       skip,
       take: limit,
       search,
-      kycStatus,
       isActive,
       profileStage,
     });
