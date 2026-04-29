@@ -125,4 +125,13 @@ export class AdminController {
 
     sendSuccess(res, { message: "Logged out" });
   };
+
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    if (!req.admin) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+    const admin = await this.adminService.getProfile(req.admin.id);
+    sendSuccess(res, { data: admin });
+  };
 }
