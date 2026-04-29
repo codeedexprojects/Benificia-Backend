@@ -24,9 +24,11 @@ export const PAGINATION_MAX_LIMIT = 100;
 export const JWT_COOKIE_NAME = "token";
 export const JWT_REFRESH_COOKIE_NAME = "refresh_token";
 
+const isProd = process.env["NODE_ENV"] === "production";
+
 export const JWT_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true,
-  sameSite: "strict" as const,
+  secure: isProd,
+  sameSite: (isProd ? "strict" : "lax") as "strict" | "lax",
   path: "/",
-} as const;
+};

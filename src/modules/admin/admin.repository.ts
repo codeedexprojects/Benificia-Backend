@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { OtpPurpose } from "@prisma/client";
+import { OtpChannel, OtpPurpose } from "@prisma/client";
 
 export class AdminRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -46,7 +46,8 @@ export class AdminRepository {
   createOtpLog(data: { email: string; otpCodeHash: string; expiresAt: Date }) {
     return this.prisma.otpLog.create({
       data: {
-        email: data.email,
+        recipient: data.email,
+        channel: OtpChannel.email,
         purpose: OtpPurpose.mfa,
         otpCodeHash: data.otpCodeHash,
         expiresAt: data.expiresAt,
@@ -59,7 +60,8 @@ export class AdminRepository {
   findActiveOtpLog(email: string) {
     return this.prisma.otpLog.findFirst({
       where: {
-        email,
+        recipient: email,
+        channel: OtpChannel.email,
         purpose: OtpPurpose.mfa,
         isVerified: false,
         expiresAt: { gt: new Date() },
@@ -83,6 +85,14 @@ export class AdminRepository {
       where: { id },
       data: { attemptCount: { increment: 1 } },
       select: { id: true, attemptCount: true },
+    });
+  }
+
+  resetOtpAttempts(id: string) {
+    return this.prisma.otpLog.update({
+      where: { id },
+      data: { attemptCount: 0 },
+      select: { id: true },
     });
   }
 

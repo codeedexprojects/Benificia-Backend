@@ -1,0 +1,70 @@
+// ════════════════════════════════════════════════════════════
+// prisma/schema/health.prisma
+// MODULE — Health Centres
+// ════════════════════════════════════════════════════════════
+
+model HealthCentre {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Identity
+  name     String  @db.VarChar(255)
+  logoS3Key String? @map("logo_s3_key") @db.VarChar(500)
+  phone    String? @db.VarChar(20)
+  email    String? @db.VarChar(255)
+  website  String? @db.VarChar(500)
+
+  // Location
+  addressLine1 String  @map("address_line1") @db.VarChar(255)
+  addressLine2 String? @map("address_line2") @db.VarChar(255)
+  city         String  @db.VarChar(100)
+  state        String  @db.VarChar(100)
+  pincode      String  @db.VarChar(10)
+  latitude     Float?
+  longitude    Float?
+
+  // Classification
+  centreType   String   @map("centre_type") @db.VarChar(50)
+  // e.g. hospital, clinic, diagnostic_lab, wellness_centre
+  specialities String[] @default([])
+  // e.g. ["cardiology", "pathology", "general"]
+
+  // Pricing
+  isFree        Boolean @default(false) @map("is_free")
+  // false = paid or mixed
+  minFee        Float?  @map("min_fee")
+  maxFee        Float?  @map("max_fee")
+
+  // Services stored as JSON — flexible for AI developer
+  services Json @default("[]")
+  // [{ name, description, price, isFree }]
+
+  // Quality
+  rating       Float?  @map("rating")
+  reviewCount  Int     @default(0) @map("review_count")
+  isVerified   Boolean @default(false) @map("is_verified")
+
+  // Timings
+  openingHours Json? @map("opening_hours")
+  // { mon: "9:00-18:00", tue: "9:00-18:00", ... }
+
+  // Status
+  isActive     Boolean   @default(true) @map("is_active")
+  addedByAdmin String    @map("added_by_admin") @db.Uuid
+  notes        String?   @db.VarChar(1000)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  admin AdminUser @relation(fields: [addedByAdmin], references: [id])
+
+  @@index([isActive])
+  @@index([city])
+  @@index([state])
+  @@index([pincode])
+  @@index([centreType])
+  @@index([isFree])
+  @@index([isVerified])
+  @@index([createdAt])
+  @@map("health_centres")
+}

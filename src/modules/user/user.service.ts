@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { addMinutes } from "date-fns";
 import type { SESClient } from "@aws-sdk/client-ses";
 import type { createClient } from "redis";
-import { OtpPurpose, type ProfileStage } from "@prisma/client";
+import { OtpChannel, OtpPurpose, type ProfileStage } from "@prisma/client";
 import type { UserRepository } from "./user.repository";
 import { hashOtp, compareOtp, hashToken } from "../../utils/encryption";
 import {
@@ -21,6 +21,8 @@ import {
   verifyUserRefreshToken,
 } from "../../utils/jwt";
 import { sendEmail, interpolateTemplate } from "../../utils/email";
+import { sendSmsOtp } from "../../utils/twofactor";
+import { env } from "../../config/env";
 import {
   OTP_EXPIRY_MINUTES,
   OTP_MAX_ATTEMPTS,
@@ -41,7 +43,7 @@ type RedisClient = ReturnType<typeof createClient>;
 
 interface SessionCache {
   userId: string;
-  email: string;
+  email: string | null;
 }
 
 interface RequestMeta {
@@ -58,7 +60,8 @@ interface TokenPair {
 interface AuthResult extends TokenPair {
   user: {
     id: string;
-    email: string;
+    email: string | null;
+    phone: string | null;
     profileStage: ProfileStage;
     isNewUser: boolean;
   };
@@ -78,22 +81,119 @@ export class UserService {
     private readonly s3: S3Client,
   ) {}
 
-  async sendOtp(email: string): Promise<{ isNewUser: boolean }> {
-    const existing = await this.userRepository.findByEmail(email);
+  // ── Dev bypass ────────────────────────────────────────────────
+  // In development every OTP send is a no-op and every verify accepts
+  // the fixed code "123456". No DB rows are created or consumed, so the
+  // code works for any email / phone and never expires.
 
-    // Treat soft-deleted accounts as non-existent (they cannot log in)
+  private readonly DEV_OTP = "123456";
+  private readonly isDev = env.NODE_ENV === "development";
+
+  private async devVerifyEmail(
+    email: string,
+    otpCode: string,
+    meta: RequestMeta,
+  ): Promise<AuthResult> {
+    if (otpCode !== this.DEV_OTP) throw new BadRequestError("Invalid OTP");
+
+    const existing = await this.userRepository.findByEmail(email);
     const user =
       existing && !existing.deletedAt && existing.isActive ? existing : null;
 
+    let userId: string;
+    let profileStage: ProfileStage;
     const isNewUser = user === null;
-    const purpose = isNewUser ? OtpPurpose.registration : OtpPurpose.login;
 
+    if (isNewUser) {
+      try {
+        const created = await this.userRepository.createUser(email);
+        userId = created.id;
+        profileStage = created.profileStage;
+      } catch {
+        const found = await this.userRepository.findByEmail(email);
+        if (!found || found.deletedAt || !found.isActive)
+          throw new ForbiddenError("Account unavailable");
+        userId = found.id;
+        profileStage = found.profileStage;
+      }
+    } else {
+      if (!user.isActive) throw new ForbiddenError("Account deactivated");
+      userId = user.id;
+      profileStage = user.profileStage;
+    }
+
+    const tokens = await this.issueTokens({ userId, email }, meta);
+    return {
+      ...tokens,
+      user: { id: userId, email, phone: null, profileStage, isNewUser },
+    };
+  }
+
+  private async devVerifyPhone(
+    phone: string,
+    otpCode: string,
+    meta: RequestMeta,
+  ): Promise<AuthResult> {
+    if (otpCode !== this.DEV_OTP) throw new BadRequestError("Invalid OTP");
+
+    const existing = await this.userRepository.findByPhone(phone);
+    const user =
+      existing && !existing.deletedAt && existing.isActive ? existing : null;
+
+    let userId: string;
+    let userEmail: string | null;
+    let profileStage: ProfileStage;
+    const isNewUser = user === null;
+
+    if (isNewUser) {
+      try {
+        const created = await this.userRepository.createPhoneUser(phone);
+        userId = created.id;
+        userEmail = created.email;
+        profileStage = created.profileStage;
+      } catch {
+        const found = await this.userRepository.findByPhone(phone);
+        if (!found || found.deletedAt || !found.isActive)
+          throw new ForbiddenError("Account unavailable");
+        userId = found.id;
+        userEmail = found.email;
+        profileStage = found.profileStage;
+      }
+    } else {
+      if (!user.isActive) throw new ForbiddenError("Account deactivated");
+      userId = user.id;
+      userEmail = user.email;
+      profileStage = user.profileStage;
+    }
+
+    const tokens = await this.issueTokens({ userId, email: userEmail }, meta);
+    return {
+      ...tokens,
+      user: { id: userId, email: userEmail, phone, profileStage, isNewUser },
+    };
+  }
+
+  // ── Email OTP ─────────────────────────────────────────────────
+
+  async sendEmailOtp(email: string): Promise<{ isNewUser: boolean }> {
+    const existing = await this.userRepository.findByEmail(email);
+    const user =
+      existing && !existing.deletedAt && existing.isActive ? existing : null;
+    const isNewUser = user === null;
+
+    if (this.isDev) {
+      console.log(`[DEV] Email OTP for ${email}: ${this.DEV_OTP}`);
+      return { isNewUser };
+    }
+
+    const purpose = isNewUser ? OtpPurpose.registration : OtpPurpose.login;
     const otp = generateOtp();
     const otpHash = await hashOtp(otp);
     const expiresAt = addMinutes(new Date(), OTP_EXPIRY_MINUTES);
 
     await this.userRepository.createOtpLog({
-      email,
+      recipient: email,
+      channel: OtpChannel.email,
       otpCodeHash: otpHash,
       expiresAt,
       purpose,
@@ -114,12 +214,17 @@ export class UserService {
     return { isNewUser };
   }
 
-  async verifyOtp(
+  async verifyEmailOtp(
     email: string,
     otpCode: string,
     meta: RequestMeta,
   ): Promise<AuthResult> {
-    const otpLog = await this.userRepository.findActiveOtpLog(email);
+    if (this.isDev) return this.devVerifyEmail(email, otpCode, meta);
+
+    const otpLog = await this.userRepository.findActiveOtpLog(
+      email,
+      OtpChannel.email,
+    );
     if (!otpLog) throw new BadRequestError("OTP expired or not requested");
 
     if (otpLog.attemptCount >= OTP_MAX_ATTEMPTS) {
@@ -142,13 +247,11 @@ export class UserService {
     let profileStage: ProfileStage;
 
     if (isNewUser) {
-      // Create account — handle concurrent registration race condition via unique constraint
       try {
         const created = await this.userRepository.createUser(email);
         userId = created.id;
         profileStage = created.profileStage;
       } catch {
-        // P2002: concurrent request already created this user — proceed as login
         const existing = await this.userRepository.findByEmail(email);
         if (!existing || existing.deletedAt || !existing.isActive) {
           throw new ForbiddenError("Account unavailable");
@@ -166,13 +269,127 @@ export class UserService {
     }
 
     await this.userRepository.markOtpVerified(otpLog.id);
-
     const tokens = await this.issueTokens({ userId, email }, meta);
 
     return {
       ...tokens,
-      user: { id: userId, email, profileStage, isNewUser },
+      user: { id: userId, email, phone: null, profileStage, isNewUser },
     };
+  }
+
+  // ── Phone OTP ─────────────────────────────────────────────────
+
+  async sendPhoneOtp(phone: string): Promise<{ isNewUser: boolean }> {
+    const existing = await this.userRepository.findByPhone(phone);
+    const user =
+      existing && !existing.deletedAt && existing.isActive ? existing : null;
+    const isNewUser = user === null;
+
+    if (this.isDev) {
+      console.log(`[DEV] Phone OTP for ${phone}: ${this.DEV_OTP}`);
+      return { isNewUser };
+    }
+
+    const purpose = isNewUser ? OtpPurpose.registration : OtpPurpose.login;
+    const otp = generateOtp();
+    const otpHash = await hashOtp(otp);
+    const expiresAt = addMinutes(new Date(), OTP_EXPIRY_MINUTES);
+
+    await this.userRepository.createOtpLog({
+      recipient: phone,
+      channel: OtpChannel.phone,
+      otpCodeHash: otpHash,
+      expiresAt,
+      purpose,
+      userId: user?.id ?? null,
+    });
+
+    await sendSmsOtp(phone, otp);
+
+    return { isNewUser };
+  }
+
+  async verifyPhoneOtp(
+    phone: string,
+    otpCode: string,
+    meta: RequestMeta,
+  ): Promise<AuthResult> {
+    if (this.isDev) return this.devVerifyPhone(phone, otpCode, meta);
+
+    const otpLog = await this.userRepository.findActiveOtpLog(
+      phone,
+      OtpChannel.phone,
+    );
+    if (!otpLog) throw new BadRequestError("OTP expired or not requested");
+
+    if (otpLog.attemptCount >= OTP_MAX_ATTEMPTS) {
+      throw new ForbiddenError("Too many OTP attempts. Request a new OTP.");
+    }
+
+    const valid = await compareOtp(otpCode, otpLog.otpCodeHash);
+    if (!valid) {
+      const updated = await this.userRepository.incrementOtpAttempts(otpLog.id);
+      const remaining = OTP_MAX_ATTEMPTS - updated.attemptCount;
+      throw new BadRequestError(
+        remaining > 0
+          ? `Invalid OTP. ${remaining} attempt(s) remaining.`
+          : "Invalid OTP. No attempts remaining.",
+      );
+    }
+
+    const isNewUser = otpLog.purpose === OtpPurpose.registration;
+    let userId: string;
+    let userEmail: string | null;
+    let profileStage: ProfileStage;
+
+    if (isNewUser) {
+      // Phone-first registration — create account with phone, no email required
+      try {
+        const created = await this.userRepository.createPhoneUser(phone);
+        userId = created.id;
+        userEmail = created.email;
+        profileStage = created.profileStage;
+      } catch {
+        // P2002 — concurrent request already created this user; proceed as login
+        const existing = await this.userRepository.findByPhone(phone);
+        if (!existing || existing.deletedAt || !existing.isActive) {
+          throw new ForbiddenError("Account unavailable");
+        }
+        userId = existing.id;
+        userEmail = existing.email;
+        profileStage = existing.profileStage;
+      }
+    } else {
+      const user = await this.userRepository.findByPhone(phone);
+      if (!user || user.deletedAt)
+        throw new UnauthorizedError("Account not found");
+      if (!user.isActive) throw new ForbiddenError("Account deactivated");
+      userId = user.id;
+      userEmail = user.email;
+      profileStage = user.profileStage;
+    }
+
+    await this.userRepository.markOtpVerified(otpLog.id);
+
+    const tokens = await this.issueTokens({ userId, email: userEmail }, meta);
+
+    return {
+      ...tokens,
+      user: { id: userId, email: userEmail, phone, profileStage, isNewUser },
+    };
+  }
+
+  // Keep the old names as aliases so existing tests/callers keep working
+  async sendOtp(email: string): Promise<{ isNewUser: boolean }> {
+    return this.sendEmailOtp(email);
+  }
+
+  async verifyOtp(
+    email: string,
+    otpCode: string,
+    meta: RequestMeta,
+  ): Promise<AuthResult> {
+    return this.verifyEmailOtp(email, otpCode, meta);
   }
 
   async refreshSession(refreshToken: string): Promise<TokenPair> {

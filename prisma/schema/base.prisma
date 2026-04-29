@@ -108,6 +108,11 @@ enum OtpPurpose {
   aadhaar_kyc
 }
 
+enum OtpChannel {
+  email
+  phone
+}
+
 enum AdminRole {
   super_admin
   product_admin

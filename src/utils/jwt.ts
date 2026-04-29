@@ -26,7 +26,7 @@ export interface AdminRefreshPayload {
 
 export interface UserAccessPayload {
   sub: string;
-  email: string;
+  email: string | null;
   type: "user_access";
   iat?: number;
   exp?: number;
