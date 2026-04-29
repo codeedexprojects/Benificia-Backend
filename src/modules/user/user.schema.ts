@@ -1,16 +1,40 @@
 import { z } from "zod";
 
-export const sendOtpSchema = z.object({
+// E.164 phone — digits only, 7-15 chars (covers all international formats)
+const phoneSchema = z
+  .string()
+  .regex(
+    /^\+[1-9]\d{6,14}$/,
+    "Phone must be in E.164 format (e.g. +919876543210)",
+  );
+
+export const sendEmailOtpSchema = z.object({
   email: z.email({ error: "Please enter a valid email address" }),
 });
 
-export const verifyOtpSchema = z.object({
+export const sendPhoneOtpSchema = z.object({
+  phone: phoneSchema,
+});
+
+export const verifyEmailOtpSchema = z.object({
   email: z.email({ error: "Please enter a valid email address" }),
   otp: z
     .string()
     .length(6, "OTP must be exactly 6 digits")
     .regex(/^\d{6}$/, "OTP must contain only digits"),
 });
+
+export const verifyPhoneOtpSchema = z.object({
+  phone: phoneSchema,
+  otp: z
+    .string()
+    .length(6, "OTP must be exactly 6 digits")
+    .regex(/^\d{6}$/, "OTP must contain only digits"),
+});
+
+// Keep the old name as an alias so existing imports don't break
+export const sendOtpSchema = sendEmailOtpSchema;
+export const verifyOtpSchema = verifyEmailOtpSchema;
 
 // ── S3 profile photo ──────────────────────────────────────────
 

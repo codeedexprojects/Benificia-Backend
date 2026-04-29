@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { OtpPurpose } from "@prisma/client";
+import { OtpChannel, OtpPurpose } from "@prisma/client";
 
 export class UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -12,6 +12,24 @@ export class UserRepository {
       select: {
         id: true,
         email: true,
+        phone: true,
+        isPhoneVerified: true,
+        profileStage: true,
+        kycStatus: true,
+        isActive: true,
+        deletedAt: true,
+      },
+    });
+  }
+
+  findByPhone(phone: string) {
+    return this.prisma.user.findUnique({
+      where: { phone },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        isPhoneVerified: true,
         profileStage: true,
         kycStatus: true,
         isActive: true,
@@ -26,6 +44,8 @@ export class UserRepository {
       select: {
         id: true,
         email: true,
+        phone: true,
+        isPhoneVerified: true,
         profileStage: true,
         kycStatus: true,
         isActive: true,
@@ -33,10 +53,36 @@ export class UserRepository {
     });
   }
 
+  createPhoneUser(phone: string) {
+    return this.prisma.user.create({
+      data: { phone, isPhoneVerified: true },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        isPhoneVerified: true,
+        profileStage: true,
+        kycStatus: true,
+        isActive: true,
+      },
+    });
+  }
+
+  // Marks phone as verified. Called on every successful phone OTP verify
+  // to keep isPhoneVerified consistent even if it was manually reset.
+  upsertPhone(userId: string, phone: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { phone, isPhoneVerified: true },
+      select: { id: true, phone: true, isPhoneVerified: true },
+    });
+  }
+
   // ── OTP ───────────────────────────────────────────────────────
 
   createOtpLog(data: {
-    email: string;
+    recipient: string;
+    channel: OtpChannel;
     otpCodeHash: string;
     expiresAt: Date;
     purpose: OtpPurpose;
@@ -44,7 +90,8 @@ export class UserRepository {
   }) {
     return this.prisma.otpLog.create({
       data: {
-        email: data.email,
+        recipient: data.recipient,
+        channel: data.channel,
         purpose: data.purpose,
         otpCodeHash: data.otpCodeHash,
         expiresAt: data.expiresAt,
@@ -54,10 +101,11 @@ export class UserRepository {
     });
   }
 
-  findActiveOtpLog(email: string) {
+  findActiveOtpLog(recipient: string, channel: OtpChannel) {
     return this.prisma.otpLog.findFirst({
       where: {
-        email,
+        recipient,
+        channel,
         purpose: { in: [OtpPurpose.registration, OtpPurpose.login] },
         isVerified: false,
         expiresAt: { gt: new Date() },

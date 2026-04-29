@@ -24,13 +24,18 @@ const envSchema = z.object({
   AWS_SES_FROM_EMAIL: z.email(),
   AWS_S3_BUCKET: z.string().min(1),
 
-  CORS_ORIGINS: z.string().default("http://localhost:5173"),
+  CORS_ORIGINS: z.string().default("http://localhost:30001"),
 
   AI_SERVER_URL: z.url(),
   AI_SERVER_API_KEY: z.string().min(1),
 
   DEEPVUE_CLIENT_ID: z.string().min(1),
   DEEPVUE_CLIENT_SECRET: z.string().min(1),
+
+  TWOFACTOR_API_KEY: z.string().min(1),
+  // Optional: custom DLT-approved SMS template name. Defaults to the
+  // 2factor auto-generated OTP template when not set.
+  TWOFACTOR_OTP_TEMPLATE: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

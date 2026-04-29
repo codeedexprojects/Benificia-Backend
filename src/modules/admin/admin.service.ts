@@ -29,6 +29,7 @@ import {
   BadRequestError,
   NotFoundError,
 } from "../../utils/errors";
+import { env } from "../../config/env";
 import type { z } from "zod";
 import type { listUsersSchema } from "./admin.schema";
 
@@ -61,6 +62,10 @@ export class AdminService {
       throw new UnauthorizedError("Invalid credentials");
     }
     if (!admin.isActive) throw new ForbiddenError("Account deactivated");
+
+    // In development the static seed OTP (123456) is always active — skip
+    // generating a new OTP and sending email entirely.
+    if (env.NODE_ENV === "development") return;
 
     const otp = generateOtp();
     const otpHash = await hashOtp(otp);
@@ -112,8 +117,17 @@ export class AdminService {
       );
     }
 
+    // In development the static seed OTP (123456) must stay reusable across
+    // logins, so skip marking it verified. In production every OTP is
+    // single-use — always mark verified.
+    const STATIC_OTP_ID = "00000000-0000-0000-0000-000000000001";
+    const isStaticOtp =
+      env.NODE_ENV === "development" && otpLog.id === STATIC_OTP_ID;
+
     await Promise.all([
-      this.adminRepository.markOtpVerified(otpLog.id),
+      isStaticOtp
+        ? this.adminRepository.resetOtpAttempts(otpLog.id)
+        : this.adminRepository.markOtpVerified(otpLog.id),
       this.adminRepository.updateLastLogin(admin.id),
     ]);
 

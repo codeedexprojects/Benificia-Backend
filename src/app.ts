@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { globalRateLimit } from "./middleware/rateLimit.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
+import { requestLogger } from "./middleware/requestLogger.middleware";
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 
 app.use(globalRateLimit);
+app.use(requestLogger);
 
 app.set("trust proxy", 1);
 
