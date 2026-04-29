@@ -264,6 +264,20 @@ export class AdminService {
     ]);
   }
 
+  async getProfile(adminId: string) {
+    const admin = await this.adminRepository.findById(adminId);
+    if (!admin || !admin.isActive) {
+      throw new UnauthorizedError("Account not found or deactivated");
+    }
+
+    return {
+      id: admin.id,
+      email: admin.email,
+      name: admin.name,
+      role: admin.role,
+    };
+  }
+
   private async issueTokens(
     session: SessionData,
   ): Promise<{ accessToken: string; refreshToken: string }> {

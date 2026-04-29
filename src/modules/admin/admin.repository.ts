@@ -20,6 +20,19 @@ export class AdminRepository {
     });
   }
 
+  findById(id: string) {
+    return this.prisma.adminUser.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+      },
+    });
+  }
+
   updateLastLogin(id: string) {
     return this.prisma.adminUser.update({
       where: { id },
