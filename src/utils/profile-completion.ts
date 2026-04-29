@@ -1,24 +1,20 @@
 import type { ProfileStage } from "@prisma/client";
 
-// Auth=10%, KYC=30%, Personal=20%, Fact-Finding=40%
+// Auth=20%, Personal=30%, Fact-Finding=50%
 const STAGE_PERCENTAGE: Record<ProfileStage, number> = {
-  auth_complete: 10,
-  kyc_in_progress: 25,
-  kyc_complete: 40,
-  personal_complete: 60,
-  fact_finding_income: 68,
-  fact_finding_expenses: 76,
-  fact_finding_assets: 84,
-  fact_finding_goals: 92,
+  auth_complete: 20,
+  personal_complete: 50,
+  fact_finding_income: 60,
+  fact_finding_expenses: 70,
+  fact_finding_assets: 80,
+  fact_finding_goals: 90,
   fact_finding_risk: 100,
   fact_finding_complete: 100,
   recommendations_ready: 100,
 };
 
 const NEXT_STEP: Record<ProfileStage, string> = {
-  auth_complete: "kyc_verification",
-  kyc_in_progress: "kyc_confirm",
-  kyc_complete: "personal_details",
+  auth_complete: "personal_details",
   personal_complete: "fact_finding",
   fact_finding_income: "fact_finding_expenses",
   fact_finding_expenses: "fact_finding_assets",

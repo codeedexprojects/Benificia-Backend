@@ -15,7 +15,6 @@ export class UserRepository {
         phone: true,
         isPhoneVerified: true,
         profileStage: true,
-        kycStatus: true,
         isActive: true,
         deletedAt: true,
       },
@@ -31,7 +30,6 @@ export class UserRepository {
         phone: true,
         isPhoneVerified: true,
         profileStage: true,
-        kycStatus: true,
         isActive: true,
         deletedAt: true,
       },
@@ -47,7 +45,6 @@ export class UserRepository {
         phone: true,
         isPhoneVerified: true,
         profileStage: true,
-        kycStatus: true,
         isActive: true,
       },
     });
@@ -62,7 +59,6 @@ export class UserRepository {
         phone: true,
         isPhoneVerified: true,
         profileStage: true,
-        kycStatus: true,
         isActive: true,
       },
     });
@@ -217,7 +213,6 @@ export class UserRepository {
         id: true,
         email: true,
         profileStage: true,
-        kycStatus: true,
         profile: {
           select: {
             fullName: true,
@@ -232,8 +227,6 @@ export class UserRepository {
             state: true,
             pincode: true,
             country: true,
-            aadhaarLast4: true,
-            kycVerifiedAt: true,
             maritalStatus: true,
             numberOfDependents: true,
             childrenAges: true,

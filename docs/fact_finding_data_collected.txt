@@ -1,0 +1,202 @@
+BENIFICIA — INFORMATION WE COLLECT FROM USERS
+==============================================
+This document explains what information we ask users to fill in
+on the Benificia app. The goal is to understand their financial
+situation so we can give them personalized recommendations.
+
+The process is split into clear steps. Users fill these in one
+step at a time — nothing is mandatory except a few marked fields.
+
+All money fields are in Indian Rupees (₹).
+
+
+══════════════════════════════════════════════════════════════
+BEFORE THE FINANCIAL QUESTIONS — PERSONAL DETAILS
+══════════════════════════════════════════════════════════════
+
+We first ask the user to fill in basic personal information:
+
+  • Full Name
+  • Date of Birth
+  • Gender  (Male / Female / Other / Prefer not to say)
+  • Profile Photo  (optional)
+
+  Address:
+    • Door no. and Street
+    • Landmark  (optional)
+    • Locality / Area
+    • City, District, State, Pincode
+    • Country  (default: India)
+
+  Family & Work:
+    • Marital Status  (Single / Married / Divorced / Widowed)
+    • Number of people financially dependent on them
+    • Ages of their children  (if any)
+    • Occupation  (what they do for work)
+    • Employer / Company name  (optional)
+    • Type of income  (Salaried / Business / Freelance)
+    • At what age they plan to retire  (default: 60)
+    • Are they the main earner in the family?  (Yes / No)
+    • Do their family members fully depend on their income?  (Yes / No)
+
+
+══════════════════════════════════════════════════════════════
+STEP 1 — INCOME
+(How much money comes in every month?)
+══════════════════════════════════════════════════════════════
+
+  • Monthly salary from job
+  • Monthly income from business
+  • Monthly passive income  (rent received, interest, dividends, etc.)
+  • Any other monthly income
+  • Annual bonus or incentive  (once a year)
+  • How much do they expect their income to grow each year?  (in %)
+
+
+══════════════════════════════════════════════════════════════
+STEP 2 — EXPENSES
+(How much money goes out every month?)
+══════════════════════════════════════════════════════════════
+
+Fixed monthly payments:
+  • Rent or home loan EMI
+  • Car or vehicle loan EMI
+  • Other loan EMIs  (personal, education, etc.)
+  • Total insurance premiums being paid monthly
+
+Day-to-day expenses:
+  • Groceries and food
+  • Electricity, water, internet and other utilities
+  • Transport and commuting
+  • Medical and healthcare costs
+
+Lifestyle spending:
+  • Dining out and entertainment
+  • Shopping  (clothes, gadgets, etc.)
+  • Children's school fees or tuition
+  • Any other regular expenses
+
+
+══════════════════════════════════════════════════════════════
+STEP 3 — ASSETS & LIABILITIES
+(What do they own and what do they owe?)
+══════════════════════════════════════════════════════════════
+
+What they own (current value):
+  • Cash in hand and bank savings
+  • Fixed deposits  (FDs)
+  • Mutual funds and stocks
+  • Gold  (physical or sovereign bonds)
+  • Property / real estate value
+  • EPF or PPF balance  (provident fund)
+  • Any other assets
+
+What they owe (amount still to be paid):
+  • Home loan remaining balance
+  • Vehicle loan remaining balance
+  • Personal loan remaining balance
+  • Credit card unpaid dues
+  • Any other outstanding debts
+
+Existing insurance they already have:
+  • Life insurance — total cover amount
+  • Health insurance — total cover amount
+
+
+══════════════════════════════════════════════════════════════
+STEP 4 — FINANCIAL GOALS
+(What are they saving or planning for?)
+══════════════════════════════════════════════════════════════
+
+Users pick between 1 and 6 goals from the list below.
+For each goal they tell us:
+
+  • What the goal is  (from the list below)
+  • How much money they will need  (₹ amount)
+  • In how many years they want to achieve it
+  • How much they have already saved toward it
+  • How important this goal is compared to their other goals
+
+Available goals to choose from:
+  1. Emergency Fund        — Save money for unexpected situations
+  2. Child's Education     — Plan for children's college or higher studies
+  3. Buy a House           — Save to purchase a home or property
+  4. Retirement            — Build savings to live comfortably after retiring
+  5. Wealth Creation       — Grow money through investments
+  6. Repay Debts           — Pay off existing loans faster
+
+
+══════════════════════════════════════════════════════════════
+STEP 5 — RISK APPETITE
+(How comfortable are they with financial risk?)
+══════════════════════════════════════════════════════════════
+
+We ask 5 simple questions to understand how the user feels about
+risk in investments. Each question has 4 options to choose from.
+
+Based on the answers, the user is placed into one of three groups:
+
+  CONSERVATIVE
+  — Prefers safety over growth.
+  — Does not want to risk losing money.
+  — Comfortable with lower but stable returns.
+
+  MODERATE
+  — Comfortable with some ups and downs.
+  — Wants a balance between safety and growth.
+
+  AGGRESSIVE
+  — Comfortable with high risk for potentially higher returns.
+  — Okay with short-term losses for long-term gains.
+
+Note: The questions will be written in simple, everyday language
+on the app. The client can review and customise the exact wording.
+
+Sample question areas:
+  1. How long have you been investing?
+  2. What would you do if your investment dropped by 20% suddenly?
+  3. Which type of investment would you prefer?
+  4. When do you think you will need this money?
+  5. How stable and secure is your current income?
+
+
+══════════════════════════════════════════════════════════════
+WHAT WE DO NOT COLLECT (Phase 1)
+══════════════════════════════════════════════════════════════
+
+The following are NOT required in the first version of the app:
+
+  • Aadhaar card or any identity verification
+  • PAN number
+  • Bank account or UPI details
+  • Tax returns or income proof documents
+  • Credit score
+
+
+══════════════════════════════════════════════════════════════
+HOW THIS INFORMATION IS USED
+══════════════════════════════════════════════════════════════
+
+All the information collected is used only to generate personalized
+financial recommendations for the user — suggesting the right
+insurance plans and investment options based on their specific
+income, expenses, goals, and risk comfort level.
+
+No information is shared with third parties without user consent.
+
+
+══════════════════════════════════════════════════════════════
+FOR THE CLIENT — THINGS YOU CAN CHANGE
+══════════════════════════════════════════════════════════════
+
+  • Any field in any step can be added, removed, or renamed easily.
+  • The 5 risk questions and their answer options can be fully
+    customised — just share the question text and we will update it.
+  • The goal types can be expanded (e.g. adding "Marriage", "Travel",
+    "Medical Emergency Fund", etc.) on request.
+  • The order of steps can be changed if needed.
+
+Please review each section and let us know:
+  ✓ Which fields should be kept
+  ✗ Which fields should be removed
+  + What new fields should be added

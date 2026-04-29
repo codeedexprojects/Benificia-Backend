@@ -495,7 +495,6 @@ export class UserService {
         id: user.id,
         email: user.email,
         profileStage: user.profileStage,
-        kycStatus: user.kycStatus,
       },
       profile: user.profile ? { ...profileRest, photoUrl } : null,
       completion: getCompletionStatus(user.profileStage),
@@ -509,14 +508,14 @@ export class UserService {
     const user = await this.userRepository.getFullProfile(userId);
     if (!user) throw new NotFoundError("User not found");
 
-    const allowedStages = ["kyc_complete", "personal_complete"] as const;
+    const allowedStages = ["auth_complete", "personal_complete"] as const;
     if (
       !allowedStages.includes(
         user.profileStage as (typeof allowedStages)[number],
       )
     ) {
       throw new ForbiddenError(
-        "Please complete Aadhaar KYC verification before filling personal details",
+        "Please complete authentication before filling personal details",
       );
     }
 
