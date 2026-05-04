@@ -9,37 +9,32 @@
       "name": "User APIs",
       "item": [
         {
-          "name": "Auth",
+          "name": "Auth — Email",
           "item": [
             {
-              "name": "Send OTP",
+              "name": "Send Email OTP",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"user@example.com\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/auth/send-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/email/send-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "auth", "send-otp"]
+                  "path": ["api", "v1", "auth", "email", "send-otp"]
                 }
               }
             },
             {
-              "name": "Verify OTP",
+              "name": "Verify Email OTP",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status code is 200 or 201\", function () {",
+                      "pm.test(\"Status 200 or 201\", function () {",
                       "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
                       "});"
                     ],
@@ -49,20 +44,15 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/auth/verify-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/email/verify-otp",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "auth", "verify-otp"]
+                  "path": ["api", "v1", "auth", "email", "verify-otp"]
                 }
               }
             },
@@ -91,6 +81,56 @@
           ]
         },
         {
+          "name": "Auth — Phone",
+          "item": [
+            {
+              "name": "Send Phone OTP",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+919876543210\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/phone/send-otp",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "phone", "send-otp"]
+                }
+              }
+            },
+            {
+              "name": "Verify Phone OTP",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status 200 or 201\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/phone/verify-otp",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "phone", "verify-otp"]
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "Profile",
           "item": [
             {
@@ -108,12 +148,7 @@
               "name": "Update Personal Details",
               "request": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"maritalStatus\": \"single\",\n  \"numberOfDependents\": 0,\n  \"childrenAges\": [],\n  \"occupation\": \"Software Engineer\",\n  \"employer\": \"Tech Corp\",\n  \"incomeType\": \"fixed\",\n  \"retirementAge\": 60,\n  \"isPrimaryEarner\": true,\n  \"dependentsRelyOnIncome\": true\n}"
@@ -129,12 +164,7 @@
               "name": "Request Photo Upload URL",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"contentType\": \"image/jpeg\"\n}"
@@ -150,12 +180,7 @@
               "name": "Confirm Photo Upload",
               "request": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"key\": \"uploaded_file_key\"\n}"
@@ -181,68 +206,223 @@
           ]
         },
         {
-          "name": "KYC",
+          "name": "Fact Finding",
           "item": [
             {
-              "name": "Send Aadhaar OTP",
+              "name": "Save Income",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"aadhaarNumber\": \"123456789012\",\n  \"consentGiven\": true\n}"
+                  "raw": "{\n  \"salaryMonthly\": 80000,\n  \"businessMonthly\": 0,\n  \"passiveMonthly\": 5000,\n  \"otherMonthly\": 0,\n  \"annualBonus\": 100000,\n  \"expectedGrowthPct\": 8\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/kyc/send-otp",
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/income",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "kyc", "send-otp"]
+                  "path": ["api", "v1", "fact-finding", "income"]
                 }
               }
             },
             {
-              "name": "Verify Aadhaar OTP",
+              "name": "Save Expenses",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"otp\": \"123456\"\n}"
+                  "raw": "{\n  \"rentOrHomeLoanEmi\": 15000,\n  \"vehicleLoanEmi\": 5000,\n  \"otherLoanEmis\": 0,\n  \"existingPremiums\": 2000,\n  \"groceriesFood\": 8000,\n  \"utilities\": 3000,\n  \"transport\": 4000,\n  \"medicalHealthcare\": 1000,\n  \"diningEntertainment\": 3000,\n  \"shopping\": 2000,\n  \"childrenEducation\": 0,\n  \"otherExpenses\": 2000\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/kyc/verify-otp",
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/expenses",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "kyc", "verify-otp"]
+                  "path": ["api", "v1", "fact-finding", "expenses"]
                 }
               }
             },
             {
-              "name": "Confirm KYC Details",
+              "name": "Save Assets & Liabilities",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{}"
+                  "raw": "{\n  \"cashSavings\": 200000,\n  \"fixedDeposits\": 300000,\n  \"mutualFundsStocks\": 150000,\n  \"goldValue\": 100000,\n  \"realEstateValue\": 0,\n  \"epfPpfBalance\": 250000,\n  \"otherAssets\": 0,\n  \"homeLoanOutstanding\": 1200000,\n  \"vehicleLoanOutstanding\": 400000,\n  \"personalLoanOutstanding\": 0,\n  \"creditCardOutstanding\": 0,\n  \"otherLoans\": 0,\n  \"existingLifeCover\": 2500000,\n  \"existingHealthCover\": 500000\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/kyc/confirm",
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/assets",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "kyc", "confirm"]
+                  "path": ["api", "v1", "fact-finding", "assets"]
+                }
+              }
+            },
+            {
+              "name": "Save Goals",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"goals\": [\n    {\n      \"type\": \"retirement\",\n      \"targetAmount\": 10000000,\n      \"targetYears\": 25,\n      \"currentSaved\": 250000,\n      \"priority\": 1\n    },\n    {\n      \"type\": \"emergency_fund\",\n      \"targetAmount\": 300000,\n      \"targetYears\": 2,\n      \"currentSaved\": 200000,\n      \"priority\": 2\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/goals",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "fact-finding", "goals"]
+                }
+              }
+            },
+            {
+              "name": "Save Risk Profile",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"answers\": [2, 3, 2, 3, 2]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/risk",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "fact-finding", "risk"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Overview",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/overview",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "overview"]
+                }
+              }
+            },
+            {
+              "name": "Cash Flow Chart",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/cash-flow",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "cash-flow"]
+                }
+              }
+            },
+            {
+              "name": "Assets vs Liabilities Chart",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/assets",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "assets"]
+                }
+              }
+            },
+            {
+              "name": "Insurance Coverage Gap",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/insurance",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "insurance"]
+                }
+              }
+            },
+            {
+              "name": "Goals Tracker",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/goals",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "goals"]
+                }
+              }
+            },
+            {
+              "name": "Risk Profile Card",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/risk-profile",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "risk-profile"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recommendations",
+          "item": [
+            {
+              "name": "Generate Recommendations",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/recommendations/generate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "recommendations", "generate"]
+                },
+                "description": "Calls AI server with full user context and saves insurance + investment recommendations. User must have completed all fact-finding steps."
+              }
+            },
+            {
+              "name": "Get Latest Recommendations",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/recommendations/latest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "recommendations", "latest"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health Centres (Public)",
+          "item": [
+            {
+              "name": "List Health Centres",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/health-centres?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "health-centres"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "search", "value": "", "disabled": true },
+                    { "key": "city", "value": "", "disabled": true },
+                    { "key": "state", "value": "", "disabled": true },
+                    { "key": "pincode", "value": "", "disabled": true },
+                    { "key": "centreType", "value": "", "disabled": true },
+                    { "key": "isFree", "value": "true", "disabled": true },
+                    { "key": "isVerified", "value": "true", "disabled": true },
+                    { "key": "speciality", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Health Centre by ID",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/health-centres/{{healthCentreId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "health-centres", "{{healthCentreId}}"]
                 }
               }
             }
@@ -258,13 +438,9 @@
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "pm.test(\"Status code is 200\", function () {",
-                      "    pm.response.to.have.status(200);",
-                      "});",
-                      "",
-                      "var jsonData = pm.response.json();",
-                      "if (jsonData && jsonData.data && jsonData.data.url) {",
-                      "    pm.environment.set(\"uploadUrl\", jsonData.data.url);",
+                      "var json = pm.response.json();",
+                      "if (json && json.data && json.data.url) {",
+                      "    pm.environment.set(\"uploadUrl\", json.data.url);",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -273,57 +449,10 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"filename\": \"document.pdf\",\n  \"contentType\": \"application/pdf\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/upload/url",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "upload", "url"]
-                }
-              }
-            },
-            {
-              "name": "Get Download URL",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"key\": \"file_key\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/upload/url",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "upload", "url"]
-                }
-              }
-            },
-            {
-              "name": "Delete File",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"key\": \"file_key\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/upload/url",
@@ -346,15 +475,10 @@
               "name": "Admin Login",
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@benificia.com\",\n  \"password\": \"secure_password\"\n}"
+                  "raw": "{\n  \"email\": \"admin@benifica.in\",\n  \"password\": \"Admin@1234\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/admin/auth/login",
@@ -380,15 +504,10 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@benificia.com\",\n  \"otp\": \"123456\"\n}"
+                  "raw": "{\n  \"email\": \"admin@benifica.in\",\n  \"otp\": \"123456\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/admin/auth/verify-otp",
@@ -418,6 +537,172 @@
                   "path": ["api", "v1", "admin", "auth", "logout"]
                 }
               }
+            },
+            {
+              "name": "Get Me",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/auth/me",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "auth", "me"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Management",
+          "item": [
+            {
+              "name": "List Users",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/users?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "users"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "search", "value": "", "disabled": true },
+                    { "key": "isActive", "value": "true", "disabled": true },
+                    { "key": "profileStage", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get User Detail",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "users", "{{userId}}"]
+                }
+              }
+            },
+            {
+              "name": "Block User",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Suspicious activity\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/block",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "users", "{{userId}}", "block"]
+                }
+              }
+            },
+            {
+              "name": "Unblock User",
+              "request": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/unblock",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "users", "{{userId}}", "unblock"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health Centres (Admin)",
+          "item": [
+            {
+              "name": "List Health Centres",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/health-centres?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "health-centres"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "search", "value": "", "disabled": true },
+                    { "key": "city", "value": "", "disabled": true },
+                    { "key": "state", "value": "", "disabled": true },
+                    { "key": "centreType", "value": "", "disabled": true },
+                    { "key": "isFree", "value": "true", "disabled": true },
+                    { "key": "isVerified", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Health Centre",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var json = pm.response.json();",
+                      "if (json && json.data && json.data.id) {",
+                      "    pm.environment.set(\"healthCentreId\", json.data.id);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"City Diagnostic Centre\",\n  \"phone\": \"+919876543210\",\n  \"email\": \"info@citydiagnostic.in\",\n  \"website\": \"https://citydiagnostic.in\",\n  \"addressLine1\": \"12, MG Road\",\n  \"city\": \"Bengaluru\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560001\",\n  \"centreType\": \"diagnostic_lab\",\n  \"specialities\": [\"pathology\", \"radiology\"],\n  \"isFree\": false,\n  \"minFee\": 200,\n  \"maxFee\": 5000,\n  \"services\": [\n    { \"name\": \"CBC\", \"price\": 300, \"isFree\": false },\n    { \"name\": \"ECG\", \"price\": 200, \"isFree\": false }\n  ],\n  \"isVerified\": true,\n  \"openingHours\": {\n    \"mon\": \"8:00-20:00\",\n    \"tue\": \"8:00-20:00\",\n    \"wed\": \"8:00-20:00\",\n    \"thu\": \"8:00-20:00\",\n    \"fri\": \"8:00-20:00\",\n    \"sat\": \"8:00-18:00\",\n    \"sun\": \"9:00-14:00\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/health-centres",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "health-centres"]
+                }
+              }
+            },
+            {
+              "name": "Get Health Centre by ID",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/health-centres/{{healthCentreId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "health-centres", "{{healthCentreId}}"]
+                }
+              }
+            },
+            {
+              "name": "Update Health Centre",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"City Diagnostic Centre (Updated)\",\n  \"rating\": 4.5,\n  \"isActive\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/health-centres/{{healthCentreId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "health-centres", "{{healthCentreId}}"]
+                }
+              }
+            },
+            {
+              "name": "Delete Health Centre",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/health-centres/{{healthCentreId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "health-centres", "{{healthCentreId}}"]
+                }
+              }
             }
           ]
         }
@@ -425,9 +710,8 @@
     }
   ],
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3000"
-    }
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "userId", "value": "" },
+    { "key": "healthCentreId", "value": "" }
   ]
 }
