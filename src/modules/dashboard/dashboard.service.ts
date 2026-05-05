@@ -1,6 +1,7 @@
 import type { DashboardRepository } from "./dashboard.repository";
 import { getCompletionStatus } from "../../utils/profile-completion";
 import { NotFoundError } from "../../utils/errors";
+import type { InsuranceCoverageType, AssetType } from "@prisma/client";
 
 // ── Health score weights ──────────────────────────────────────
 const WEIGHT_SAVINGS_RATE = 30;
@@ -12,23 +13,24 @@ const WEIGHT_GOALS = 10;
 function scoreSavingsRate(pct: number) {
   return Math.round((Math.min(pct, 20) / 20) * WEIGHT_SAVINGS_RATE);
 }
-function scoreDebtLoad(totalEmi: number, income: number) {
-  if (income <= 0) return 0;
-  const r = totalEmi / income;
-  if (r <= 0.3) return WEIGHT_DEBT_LOAD;
-  if (r >= 0.6) return 0;
-  return Math.round(((0.6 - r) / 0.3) * WEIGHT_DEBT_LOAD);
+function scoreDebtLoad(hasDebts: boolean, savingsRatioPct: number) {
+  if (!hasDebts) return WEIGHT_DEBT_LOAD;
+  // Approximate from savings ratio — lower surplus suggests heavier debt load
+  if (savingsRatioPct >= 30) return WEIGHT_DEBT_LOAD;
+  if (savingsRatioPct <= 0) return 0;
+  return Math.round((savingsRatioPct / 30) * WEIGHT_DEBT_LOAD);
 }
-function scoreEmergencyFund(cash: number, monthlyExp: number) {
+function scoreEmergencyFund(cashAmount: number, monthlyExp: number) {
   if (monthlyExp <= 0) return WEIGHT_EMERGENCY_FUND;
   return Math.round(
-    (Math.min(cash / monthlyExp, 6) / 6) * WEIGHT_EMERGENCY_FUND,
+    (Math.min(cashAmount / monthlyExp, 6) / 6) * WEIGHT_EMERGENCY_FUND,
   );
 }
-function scoreInsurance(life: number, health: number, annualIncome: number) {
-  const lifeR = annualIncome > 0 ? Math.min(life / (annualIncome * 10), 1) : 0;
-  const healthR = Math.min(health / 500000, 1);
-  return Math.round(((lifeR + healthR) / 2) * WEIGHT_INSURANCE);
+function scoreInsurance(coverageTypes: InsuranceCoverageType[]) {
+  const hasLife = coverageTypes.includes("life_insurance");
+  const hasHealth = coverageTypes.includes("health_insurance");
+  const ratio = ((hasLife ? 1 : 0) + (hasHealth ? 1 : 0)) / 2;
+  return Math.round(ratio * WEIGHT_INSURANCE);
 }
 function scoreGoals(goals: { targetAmount: number; currentSaved: number }[]) {
   if (!goals.length) return 0;
@@ -42,19 +44,26 @@ function scoreGoals(goals: { targetAmount: number; currentSaved: number }[]) {
   return Math.round(avg * WEIGHT_GOALS);
 }
 
+function assetAmountByType(
+  assets: { assetType: AssetType; amount: number }[],
+  type: AssetType,
+) {
+  return assets.find((a) => a.assetType === type)?.amount ?? 0;
+}
+
 // ── Risk profile meta ─────────────────────────────────────────
 const RISK_META = {
   conservative: {
     label: "Conservative",
     description:
-      "You prefer safety over high returns. You are comfortable with lower but stable growth and want to protect your capital.",
+      "You prefer safety over high returns. Stable growth and capital protection matter most to you.",
     investmentMix: { debt: 70, equity: 20, gold: 10 },
     advice: "Focus on FDs, debt mutual funds, PPF, and sovereign gold bonds.",
   },
   moderate: {
     label: "Moderate",
     description:
-      "You are comfortable with some ups and downs in your investments. You want a healthy balance between safety and growth.",
+      "You are comfortable with some ups and downs and want a healthy balance between safety and growth.",
     investmentMix: { debt: 50, equity: 40, gold: 10 },
     advice:
       "A mix of balanced mutual funds, blue-chip stocks, and debt instruments works well for you.",
@@ -62,11 +71,31 @@ const RISK_META = {
   aggressive: {
     label: "Aggressive",
     description:
-      "You are comfortable with higher risk in pursuit of higher long-term returns. Short-term losses don't bother you.",
+      "You are comfortable with higher risk in pursuit of higher long-term returns.",
     investmentMix: { debt: 20, equity: 75, gold: 5 },
     advice:
       "Equity mutual funds, direct stocks, and growth-oriented instruments suit your profile.",
   },
+};
+
+const ASSET_TYPE_LABELS: Record<AssetType, string> = {
+  cash_savings: "Cash & Savings",
+  fixed_deposit: "Fixed Deposits",
+  mutual_funds_stocks: "Mutual Funds & Stocks",
+  gold: "Gold",
+  real_estate: "Real Estate",
+  epf_ppf: "EPF / PPF",
+  other: "Other Assets",
+};
+
+const ASSET_COLORS: Record<AssetType, string> = {
+  cash_savings: "#22C55E",
+  fixed_deposit: "#3B82F6",
+  mutual_funds_stocks: "#8B5CF6",
+  gold: "#EAB308",
+  real_estate: "#F97316",
+  epf_ppf: "#06B6D4",
+  other: "#6B7280",
 };
 
 export class DashboardService {
@@ -85,28 +114,23 @@ export class DashboardService {
 
     const monthlyIncome = income?.totalMonthly ?? 0;
     const monthlyExpenses = expense?.totalMonthly ?? 0;
-    const annualIncome = monthlyIncome * 12 + (income?.annualBonus ?? 0);
-    const totalEmi = expense
-      ? expense.rentOrHomeLoanEmi +
-        expense.vehicleLoanEmi +
-        expense.otherLoanEmis
+    const cashAmount = assets
+      ? assetAmountByType(assets.assets, "cash_savings")
       : 0;
 
     const scoreBreakdown = {
       savingsRate:
         income && expense ? scoreSavingsRate(expense.savingsRatioPct) : 0,
-      debtLoad: income && expense ? scoreDebtLoad(totalEmi, monthlyIncome) : 0,
-      emergencyFund:
-        assets && expense
-          ? scoreEmergencyFund(assets.cashSavings, monthlyExpenses)
+      debtLoad:
+        income && expense
+          ? scoreDebtLoad(
+              assets?.liabilityTypes ? assets.liabilityTypes.length > 0 : false,
+              expense.savingsRatioPct,
+            )
           : 0,
-      insurance: assets
-        ? scoreInsurance(
-            assets.existingLifeCover,
-            assets.existingHealthCover,
-            annualIncome,
-          )
-        : 0,
+      emergencyFund:
+        assets && expense ? scoreEmergencyFund(cashAmount, monthlyExpenses) : 0,
+      insurance: assets ? scoreInsurance(assets.insuranceCoverageTypes) : 0,
       goals: goals.length ? scoreGoals(goals) : 0,
     };
 
@@ -146,16 +170,14 @@ export class DashboardService {
         : null,
       completion: getCompletionStatus(data.profileStage),
       riskProfile: data.riskProfile
-        ? {
-            category: data.riskProfile.riskCategory,
-            score: data.riskProfile.totalScore,
-          }
+        ? { category: data.riskProfile.riskCategory }
         : null,
       goalsSummary: {
         total: goals.length,
         achieved: goals.filter((g) => g.isAchieved).length,
         topGoal: goals[0] ?? null,
       },
+      monthlyIncome,
     };
   }
 
@@ -177,20 +199,6 @@ export class DashboardService {
 
     const monthlyIncome = income.totalMonthly;
     const surplus = e.monthlySurplus;
-
-    // Group totals
-    const fixedTotal =
-      e.rentOrHomeLoanEmi +
-      e.vehicleLoanEmi +
-      e.otherLoanEmis +
-      e.existingPremiums;
-    const variableTotal =
-      e.groceriesFood + e.utilities + e.transport + e.medicalHealthcare;
-    const lifestyleTotal =
-      e.diningEntertainment +
-      e.shopping +
-      e.childrenEducation +
-      e.otherExpenses;
     const savingsAmount = Math.max(surplus, 0);
 
     const pct = (v: number) =>
@@ -202,84 +210,21 @@ export class DashboardService {
         monthlyIncome,
         totalExpenses: e.totalMonthly,
         surplus,
+        savingsRatioPct: e.savingsRatioPct,
         isDeficit: surplus < 0,
       },
-      // For donut / pie chart
       incomeAllocation: [
         {
-          label: "Fixed EMIs & Premiums",
-          amount: fixedTotal,
-          percentage: pct(fixedTotal),
+          label: "Expenses",
+          amount: e.totalMonthly,
+          percentage: pct(e.totalMonthly),
           color: "#EF4444",
-        },
-        {
-          label: "Variable Expenses",
-          amount: variableTotal,
-          percentage: pct(variableTotal),
-          color: "#F97316",
-        },
-        {
-          label: "Lifestyle",
-          amount: lifestyleTotal,
-          percentage: pct(lifestyleTotal),
-          color: "#EAB308",
         },
         {
           label: "Savings / Surplus",
           amount: savingsAmount,
           percentage: pct(savingsAmount),
           color: "#22C55E",
-        },
-      ],
-      // For category breakdown bar chart
-      expenseCategories: [
-        {
-          category: "Rent / Home Loan EMI",
-          amount: e.rentOrHomeLoanEmi,
-          group: "fixed",
-        },
-        {
-          category: "Vehicle Loan EMI",
-          amount: e.vehicleLoanEmi,
-          group: "fixed",
-        },
-        {
-          category: "Other Loan EMIs",
-          amount: e.otherLoanEmis,
-          group: "fixed",
-        },
-        {
-          category: "Insurance Premiums",
-          amount: e.existingPremiums,
-          group: "fixed",
-        },
-        {
-          category: "Groceries & Food",
-          amount: e.groceriesFood,
-          group: "variable",
-        },
-        { category: "Utilities", amount: e.utilities, group: "variable" },
-        { category: "Transport", amount: e.transport, group: "variable" },
-        {
-          category: "Medical & Healthcare",
-          amount: e.medicalHealthcare,
-          group: "variable",
-        },
-        {
-          category: "Dining & Entertainment",
-          amount: e.diningEntertainment,
-          group: "lifestyle",
-        },
-        { category: "Shopping", amount: e.shopping, group: "lifestyle" },
-        {
-          category: "Children's Education",
-          amount: e.childrenEducation,
-          group: "lifestyle",
-        },
-        {
-          category: "Other Expenses",
-          amount: e.otherExpenses,
-          group: "lifestyle",
         },
       ],
     };
@@ -320,34 +265,20 @@ export class DashboardService {
                 ? "Moderate"
                 : "High",
       },
-      // For side-by-side bar chart
       comparison: [
         { label: "Total Assets", amount: a.totalAssets },
         { label: "Total Liabilities", amount: a.totalLiabilities },
         { label: "Net Worth", amount: a.netWorth },
       ],
-      // For asset composition pie chart
-      assetComposition: [
-        { label: "Cash & Savings", amount: a.cashSavings, color: "#22C55E" },
-        { label: "Fixed Deposits", amount: a.fixedDeposits, color: "#3B82F6" },
-        {
-          label: "Mutual Funds & Stocks",
-          amount: a.mutualFundsStocks,
-          color: "#8B5CF6",
-        },
-        { label: "Gold", amount: a.goldValue, color: "#EAB308" },
-        { label: "Real Estate", amount: a.realEstateValue, color: "#F97316" },
-        { label: "EPF / PPF", amount: a.epfPpfBalance, color: "#06B6D4" },
-        { label: "Other Assets", amount: a.otherAssets, color: "#6B7280" },
-      ].filter((item) => item.amount > 0),
-      // For liability breakdown
-      liabilityBreakdown: [
-        { label: "Home Loan", amount: a.homeLoanOutstanding },
-        { label: "Vehicle Loan", amount: a.vehicleLoanOutstanding },
-        { label: "Personal Loan", amount: a.personalLoanOutstanding },
-        { label: "Credit Card Dues", amount: a.creditCardOutstanding },
-        { label: "Other Loans", amount: a.otherLoans },
-      ].filter((item) => item.amount > 0),
+      assetComposition: a.assets
+        .filter((asset) => asset.amount > 0)
+        .map((asset) => ({
+          label: ASSET_TYPE_LABELS[asset.assetType],
+          amount: asset.amount,
+          color: ASSET_COLORS[asset.assetType],
+        })),
+      liabilityTypes: a.liabilityTypes,
+      insuranceCoverageTypes: a.insuranceCoverageTypes,
     };
   }
 
@@ -368,68 +299,52 @@ export class DashboardService {
       };
     }
 
-    const annualIncome = income.totalMonthly * 12 + income.annualBonus;
-    const dependents = data.profile?.numberOfDependents ?? 0;
+    const annualIncome = income.totalMonthly * 12;
+    const members = data.profile?.numberOfMembers ?? 1;
+    const dependents =
+      data.profile?.numberOfDependents ?? Math.max(members - 1, 0);
+
+    const hasLife = assets.insuranceCoverageTypes.includes("life_insurance");
+    const hasHealth =
+      assets.insuranceCoverageTypes.includes("health_insurance");
+    const hasProperty =
+      assets.insuranceCoverageTypes.includes("property_insurance");
 
     // Recommended life cover = 10× annual income
     const recommendedLifeCover = annualIncome * 10;
-    const lifeCoverGap = Math.max(
-      recommendedLifeCover - assets.existingLifeCover,
-      0,
-    );
-    const lifeCovered =
-      recommendedLifeCover > 0
-        ? Math.min(
-            Math.round((assets.existingLifeCover / recommendedLifeCover) * 100),
-            100,
-          )
-        : 100;
-
     // Recommended health cover: ₹5L base + ₹2L per dependent
     const recommendedHealthCover = 500000 + dependents * 200000;
-    const healthCoverGap = Math.max(
-      recommendedHealthCover - assets.existingHealthCover,
-      0,
-    );
-    const healthCovered = Math.min(
-      Math.round((assets.existingHealthCover / recommendedHealthCover) * 100),
-      100,
-    );
 
     return {
       available: true,
-      life: {
-        existing: assets.existingLifeCover,
-        recommended: recommendedLifeCover,
-        gap: lifeCoverGap,
-        coveredPercentage: lifeCovered,
-        status:
-          lifeCoverGap === 0
-            ? "Adequate"
-            : lifeCovered >= 60
-              ? "Partial"
-              : "Under-covered",
-        message:
-          lifeCoverGap > 0
-            ? `You are ₹${(lifeCoverGap / 100000).toFixed(1)}L under-covered on life insurance`
-            : "Your life insurance coverage is adequate",
+      annualIncome,
+      coverageTypes: {
+        life: hasLife,
+        health: hasHealth,
+        property: hasProperty,
       },
-      health: {
-        existing: assets.existingHealthCover,
-        recommended: recommendedHealthCover,
-        gap: healthCoverGap,
-        coveredPercentage: healthCovered,
-        dependentsConsidered: dependents,
-        status:
-          healthCoverGap === 0
-            ? "Adequate"
-            : healthCovered >= 60
-              ? "Partial"
-              : "Under-covered",
-        message:
-          healthCoverGap > 0
-            ? `You are ₹${(healthCoverGap / 100000).toFixed(1)}L under-covered on health insurance`
-            : "Your health insurance coverage is adequate",
+      gaps: {
+        life: {
+          covered: hasLife,
+          recommended: recommendedLifeCover,
+          status: hasLife ? "Covered" : "Not covered",
+          message: hasLife
+            ? `Ensure your life cover is at least ₹${(recommendedLifeCover / 100000).toFixed(0)}L (10× annual income)`
+            : `You need life insurance of at least ₹${(recommendedLifeCover / 100000).toFixed(0)}L`,
+        },
+        health: {
+          covered: hasHealth,
+          recommended: recommendedHealthCover,
+          dependentsConsidered: dependents,
+          status: hasHealth ? "Covered" : "Not covered",
+          message: hasHealth
+            ? `Ensure your health cover is at least ₹${(recommendedHealthCover / 100000).toFixed(0)}L for your family`
+            : `You need health insurance of at least ₹${(recommendedHealthCover / 100000).toFixed(0)}L`,
+        },
+        property: {
+          covered: hasProperty,
+          status: hasProperty ? "Covered" : "Not covered",
+        },
       },
     };
   }
@@ -453,12 +368,9 @@ export class DashboardService {
         g.targetAmount > 0
           ? Math.min(Math.round((g.currentSaved / g.targetAmount) * 100), 100)
           : 0;
-
-      // Monthly savings needed = remaining / (targetYears × 12)
       const monthsLeft = g.targetYears * 12;
       const monthlySavingsNeeded =
         monthsLeft > 0 ? Math.round(remaining / monthsLeft) : 0;
-
       const onTrack =
         monthlySavingsNeeded <=
         availableForGoals / Math.max(data.financialGoals.length, 1);
@@ -505,18 +417,30 @@ export class DashboardService {
       };
     }
 
-    const { riskCategory, totalScore } = data.riskProfile;
+    const {
+      riskCategory,
+      portfolioDrop,
+      investmentStyle,
+      financialAims,
+      timeHorizon,
+      marketFeeling,
+    } = data.riskProfile;
     const meta = RISK_META[riskCategory];
 
     return {
       available: true,
       category: riskCategory,
-      score: totalScore,
-      maxScore: 20,
       label: meta.label,
       description: meta.description,
       investmentMix: meta.investmentMix,
       advice: meta.advice,
+      answers: {
+        portfolioDrop,
+        investmentStyle,
+        financialAims,
+        timeHorizon,
+        marketFeeling,
+      },
     };
   }
 }
