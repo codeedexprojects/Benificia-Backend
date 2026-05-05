@@ -30,52 +30,46 @@ export class RecommendationService {
     const expense = ctx.expenseProfile;
     const assets = ctx.assetLiabilityProfile;
 
+    const assetMap = Object.fromEntries(
+      (assets?.assets ?? []).map((a) => [a.assetType, a.amount]),
+    );
+
     // Build user_context payload for the AI server
     const userContext: Record<string, unknown> = {
       user_id: ctx.id,
       // Demographics
       gender: profile?.gender ?? null,
       marital_status: profile?.maritalStatus ?? null,
+      year_of_birth: profile?.yob ?? null,
+      number_of_members: profile?.numberOfMembers ?? 1,
       number_of_dependents: profile?.numberOfDependents ?? 0,
-      children_ages: profile?.childrenAges ?? [],
-      occupation: profile?.occupation ?? null,
-      income_type: profile?.incomeType ?? null,
       city: profile?.city ?? null,
       state: profile?.state ?? null,
-      retirement_age: profile?.retirementAge ?? 60,
-      is_primary_earner: profile?.isPrimaryEarner ?? true,
-      dependents_rely_on_income: profile?.dependentsRelyOnIncome ?? true,
       // Income
+      income_sources: income?.incomeSources ?? [],
+      salary_monthly: income?.salaryMonthly ?? 0,
+      freelance_monthly: income?.freelanceMonthly ?? 0,
+      business_monthly: income?.businessMonthly ?? 0,
+      passive_monthly: income?.passiveMonthly ?? 0,
+      other_monthly: income?.otherMonthly ?? 0,
       monthly_income: income?.totalMonthly ?? 0,
-      annual_income: income ? income.totalMonthly * 12 + income.annualBonus : 0,
-      annual_bonus: income?.annualBonus ?? 0,
-      expected_income_growth_pct: income?.expectedGrowthPct ?? 5,
+      annual_income: (income?.totalMonthly ?? 0) * 12,
       // Expenses
       monthly_expenses: expense?.totalMonthly ?? 0,
       monthly_surplus: expense?.monthlySurplus ?? 0,
       savings_ratio_pct: expense?.savingsRatioPct ?? 0,
-      total_emi: expense
-        ? expense.rentOrHomeLoanEmi +
-          expense.vehicleLoanEmi +
-          expense.otherLoanEmis
-        : 0,
-      existing_premiums_monthly: expense?.existingPremiums ?? 0,
       // Assets & liabilities
       total_assets: assets?.totalAssets ?? 0,
       total_liabilities: assets?.totalLiabilities ?? 0,
       net_worth: assets?.netWorth ?? 0,
-      cash_savings: assets?.cashSavings ?? 0,
-      fixed_deposits: assets?.fixedDeposits ?? 0,
-      mutual_funds_stocks: assets?.mutualFundsStocks ?? 0,
-      gold_value: assets?.goldValue ?? 0,
-      real_estate_value: assets?.realEstateValue ?? 0,
-      epf_ppf_balance: assets?.epfPpfBalance ?? 0,
-      home_loan_outstanding: assets?.homeLoanOutstanding ?? 0,
-      vehicle_loan_outstanding: assets?.vehicleLoanOutstanding ?? 0,
-      personal_loan_outstanding: assets?.personalLoanOutstanding ?? 0,
-      credit_card_outstanding: assets?.creditCardOutstanding ?? 0,
-      existing_life_cover: assets?.existingLifeCover ?? 0,
-      existing_health_cover: assets?.existingHealthCover ?? 0,
+      liability_types: assets?.liabilityTypes ?? [],
+      insurance_coverage_types: assets?.insuranceCoverageTypes ?? [],
+      cash_savings: assetMap["cash_savings"] ?? 0,
+      fixed_deposits: assetMap["fixed_deposit"] ?? 0,
+      mutual_funds_stocks: assetMap["mutual_funds_stocks"] ?? 0,
+      gold_value: assetMap["gold"] ?? 0,
+      real_estate_value: assetMap["real_estate"] ?? 0,
+      epf_ppf_balance: assetMap["epf_ppf"] ?? 0,
       // Goals
       financial_goals: ctx.financialGoals.map((g) => ({
         type: g.type,
@@ -86,7 +80,11 @@ export class RecommendationService {
       })),
       // Risk
       risk_category: ctx.riskProfile?.riskCategory ?? null,
-      risk_score: ctx.riskProfile?.totalScore ?? null,
+      portfolio_drop: ctx.riskProfile?.portfolioDrop ?? null,
+      investment_style: ctx.riskProfile?.investmentStyle ?? null,
+      financial_aims: ctx.riskProfile?.financialAims ?? [],
+      time_horizon: ctx.riskProfile?.timeHorizon ?? null,
+      market_feeling: ctx.riskProfile?.marketFeeling ?? null,
     };
 
     const requestId = randomUUID();

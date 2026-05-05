@@ -60,6 +60,78 @@ enum GoalType {
   debt_repayment
 }
 
+// ── Income ────────────────────────────────────────────────────
+
+enum IncomeSource {
+  full_time_salary
+  freelance_contract
+  business_owner
+  passive_income
+  other
+}
+
+// ── Assets ────────────────────────────────────────────────────
+
+enum AssetType {
+  cash_savings
+  fixed_deposit
+  mutual_funds_stocks
+  gold
+  real_estate
+  epf_ppf
+  other
+}
+
+// ── Liabilities ───────────────────────────────────────────────
+
+enum LiabilityType {
+  credit_card_debt
+  personal_loan
+  mortgage
+}
+
+// ── Insurance Coverage ────────────────────────────────────────
+
+enum InsuranceCoverageType {
+  health_insurance
+  life_insurance
+  property_insurance
+}
+
+// ── Risk Profile ──────────────────────────────────────────────
+
+enum PortfolioDrop {
+  sell_everything
+  wait_it_out
+  buy_more
+}
+
+enum InvestmentStyle {
+  conservative
+  moderate
+  aggressive
+}
+
+enum FinancialAim {
+  retirement
+  home_ownership
+  education
+  wealth_building
+  repay_debts
+}
+
+enum TimeHorizon {
+  short_1_3
+  medium_3_7
+  long_7_plus
+}
+
+enum MarketFeeling {
+  very_anxious
+  neutral
+  excited
+}
+
 enum InsuranceType {
   term
   health

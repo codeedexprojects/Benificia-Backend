@@ -5,23 +5,22 @@ import type {
   expensesSchema,
   assetsSchema,
   goalsSchema,
+  riskSchema,
 } from "./fact-finding.schema";
 
 type IncomeData = z.infer<typeof incomeSchema> & { totalMonthly: number };
 type ExpensesData = z.infer<typeof expensesSchema> & {
-  totalMonthly: number;
   monthlySurplus: number;
   savingsRatioPct: number;
 };
-type AssetsData = z.infer<typeof assetsSchema> & {
+type AssetsInput = z.infer<typeof assetsSchema>;
+type AssetsComputed = {
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
 };
 type GoalItem = z.infer<typeof goalsSchema>["goals"][number];
-type RiskData = {
-  answers: number[];
-  totalScore: number;
+type RiskData = z.infer<typeof riskSchema> & {
   riskCategory: "conservative" | "moderate" | "aggressive";
 };
 
@@ -47,11 +46,37 @@ export class FactFindingRepository {
     data: IncomeData,
     shouldAdvance: boolean,
   ): Promise<void> {
+    const {
+      incomeSources,
+      salaryMonthly,
+      freelanceMonthly,
+      businessMonthly,
+      passiveMonthly,
+      otherMonthly,
+      totalMonthly,
+    } = data;
     await this.db.$transaction([
       this.db.incomeProfile.upsert({
         where: { userId },
-        create: { userId, ...data },
-        update: data,
+        create: {
+          userId,
+          incomeSources,
+          salaryMonthly,
+          freelanceMonthly,
+          businessMonthly,
+          passiveMonthly,
+          otherMonthly,
+          totalMonthly,
+        },
+        update: {
+          incomeSources,
+          salaryMonthly,
+          freelanceMonthly,
+          businessMonthly,
+          passiveMonthly,
+          otherMonthly,
+          totalMonthly,
+        },
       }),
       ...(shouldAdvance
         ? [
@@ -69,11 +94,12 @@ export class FactFindingRepository {
     data: ExpensesData,
     shouldAdvance: boolean,
   ): Promise<void> {
+    const { totalMonthly, monthlySurplus, savingsRatioPct } = data;
     await this.db.$transaction([
       this.db.expenseProfile.upsert({
         where: { userId },
-        create: { userId, ...data },
-        update: data,
+        create: { userId, totalMonthly, monthlySurplus, savingsRatioPct },
+        update: { totalMonthly, monthlySurplus, savingsRatioPct },
       }),
       ...(shouldAdvance
         ? [
@@ -88,14 +114,39 @@ export class FactFindingRepository {
 
   async upsertAssets(
     userId: string,
-    data: AssetsData,
+    input: AssetsInput,
+    computed: AssetsComputed,
     shouldAdvance: boolean,
   ): Promise<void> {
+    const existing = await this.db.assetLiabilityProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        liabilityTypes: input.liabilityTypes,
+        insuranceCoverageTypes: input.insuranceCoverageTypes,
+        totalAssets: computed.totalAssets,
+        totalLiabilities: computed.totalLiabilities,
+        netWorth: computed.netWorth,
+      },
+      update: {
+        liabilityTypes: input.liabilityTypes,
+        insuranceCoverageTypes: input.insuranceCoverageTypes,
+        totalAssets: computed.totalAssets,
+        totalLiabilities: computed.totalLiabilities,
+        netWorth: computed.netWorth,
+      },
+    });
+
     await this.db.$transaction([
-      this.db.assetLiabilityProfile.upsert({
-        where: { userId },
-        create: { userId, ...data },
-        update: data,
+      this.db.userAsset.deleteMany({
+        where: { assetLiabilityProfileId: existing.id },
+      }),
+      this.db.userAsset.createMany({
+        data: input.assets.map((a) => ({
+          assetLiabilityProfileId: existing.id,
+          assetType: a.assetType,
+          amount: a.amount,
+        })),
       }),
       ...(shouldAdvance
         ? [
@@ -137,12 +188,34 @@ export class FactFindingRepository {
   }
 
   async upsertRisk(userId: string, data: RiskData): Promise<void> {
-    // Risk is always the final step — always advance to fact_finding_complete
+    const {
+      portfolioDrop,
+      investmentStyle,
+      financialAims,
+      timeHorizon,
+      marketFeeling,
+      riskCategory,
+    } = data;
     await this.db.$transaction([
       this.db.riskProfile.upsert({
         where: { userId },
-        create: { userId, ...data },
-        update: data,
+        create: {
+          userId,
+          portfolioDrop,
+          investmentStyle,
+          financialAims,
+          timeHorizon,
+          marketFeeling,
+          riskCategory,
+        },
+        update: {
+          portfolioDrop,
+          investmentStyle,
+          financialAims,
+          timeHorizon,
+          marketFeeling,
+          riskCategory,
+        },
       }),
       this.db.user.update({
         where: { id: userId },

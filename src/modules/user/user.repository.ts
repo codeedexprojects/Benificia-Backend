@@ -216,8 +216,8 @@ export class UserRepository {
         profile: {
           select: {
             fullName: true,
-            dateOfBirth: true,
             gender: true,
+            yob: true,
             photoS3Key: true,
             addressLine1: true,
             landmark: true,
@@ -228,14 +228,8 @@ export class UserRepository {
             pincode: true,
             country: true,
             maritalStatus: true,
+            numberOfMembers: true,
             numberOfDependents: true,
-            childrenAges: true,
-            occupation: true,
-            employer: true,
-            incomeType: true,
-            retirementAge: true,
-            isPrimaryEarner: true,
-            dependentsRelyOnIncome: true,
           },
         },
       },
@@ -245,22 +239,18 @@ export class UserRepository {
   updatePersonalDetails(
     userId: string,
     data: {
+      gender: "male" | "female" | "other" | "prefer_not_to_say";
+      yob: number;
       maritalStatus: "single" | "married" | "divorced" | "widowed";
-      numberOfDependents: number;
-      childrenAges: number[];
-      occupation: string;
-      employer?: string;
-      incomeType: "fixed" | "business" | "freelance";
-      retirementAge: number;
-      isPrimaryEarner: boolean;
-      dependentsRelyOnIncome: boolean;
+      numberOfMembers: number;
     },
   ) {
+    const numberOfDependents = Math.max(0, data.numberOfMembers - 1);
     return this.prisma.$transaction([
       this.prisma.userProfile.upsert({
         where: { userId },
-        create: { userId, ...data },
-        update: data,
+        create: { userId, ...data, numberOfDependents },
+        update: { ...data, numberOfDependents },
         select: { userId: true },
       }),
       this.prisma.user.update({
