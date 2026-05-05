@@ -28,6 +28,7 @@ const envSchema = z.object({
 
   AI_SERVER_URL: z.url(),
   AI_SERVER_API_KEY: z.string().min(1),
+  AI_SERVER_ADMIN_KEY: z.string().min(1),
 
   TWOFACTOR_API_KEY: z.string().min(1),
   // Optional: custom DLT-approved SMS template name. Defaults to the
