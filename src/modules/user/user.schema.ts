@@ -36,6 +36,20 @@ export const verifyPhoneOtpSchema = z.object({
 export const sendOtpSchema = sendEmailOtpSchema;
 export const verifyOtpSchema = verifyEmailOtpSchema;
 
+// ── Unified identifier OTP (email or phone auto-detected) ─────
+
+export const sendOtpByIdentifierSchema = z.object({
+  identifier: z.string().min(1, "Email or phone number is required"),
+});
+
+export const verifyOtpByIdentifierSchema = z.object({
+  identifier: z.string().min(1, "Email or phone number is required"),
+  otp: z
+    .string()
+    .length(6, "OTP must be exactly 6 digits")
+    .regex(/^\d{6}$/, "OTP must contain only digits"),
+});
+
 // ── S3 profile photo ──────────────────────────────────────────
 
 export const requestPhotoUploadSchema = z.object({

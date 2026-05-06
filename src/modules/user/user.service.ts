@@ -379,17 +379,48 @@ export class UserService {
     };
   }
 
-  // Keep the old names as aliases so existing tests/callers keep working
-  async sendOtp(email: string): Promise<{ isNewUser: boolean }> {
-    return this.sendEmailOtp(email);
+  // ── Unified identifier OTP (auto-detects email vs phone) ─────
+
+  private isEmail(identifier: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
   }
 
-  async verifyOtp(
-    email: string,
+  private isPhone(identifier: string): boolean {
+    return /^\+[1-9]\d{6,14}$/.test(identifier);
+  }
+
+  async sendOtpByIdentifier(
+    identifier: string,
+  ): Promise<{ isNewUser: boolean; channel: "email" | "phone" }> {
+    if (this.isEmail(identifier)) {
+      const result = await this.sendEmailOtp(identifier);
+      return { ...result, channel: "email" };
+    }
+    if (this.isPhone(identifier)) {
+      const result = await this.sendPhoneOtp(identifier);
+      return { ...result, channel: "phone" };
+    }
+    throw new BadRequestError(
+      "Identifier must be a valid email address or E.164 phone number (e.g. +919876543210)",
+    );
+  }
+
+  async verifyOtpByIdentifier(
+    identifier: string,
     otpCode: string,
     meta: RequestMeta,
-  ): Promise<AuthResult> {
-    return this.verifyEmailOtp(email, otpCode, meta);
+  ): Promise<AuthResult & { channel: "email" | "phone" }> {
+    if (this.isEmail(identifier)) {
+      const result = await this.verifyEmailOtp(identifier, otpCode, meta);
+      return { ...result, channel: "email" };
+    }
+    if (this.isPhone(identifier)) {
+      const result = await this.verifyPhoneOtp(identifier, otpCode, meta);
+      return { ...result, channel: "phone" };
+    }
+    throw new BadRequestError(
+      "Identifier must be a valid email address or E.164 phone number (e.g. +919876543210)",
+    );
   }
 
   async refreshSession(refreshToken: string): Promise<TokenPair> {

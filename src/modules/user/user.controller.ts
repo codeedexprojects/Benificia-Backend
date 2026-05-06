@@ -1,10 +1,8 @@
 import type { Request, Response } from "express";
 import type { UserService } from "./user.service";
 import {
-  sendEmailOtpSchema,
-  sendPhoneOtpSchema,
-  verifyEmailOtpSchema,
-  verifyPhoneOtpSchema,
+  sendOtpByIdentifierSchema,
+  verifyOtpByIdentifierSchema,
   requestPhotoUploadSchema,
   confirmPhotoUploadSchema,
   personalDetailsSchema,
@@ -23,27 +21,31 @@ const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  // ── Email OTP ─────────────────────────────────────────────────
+  // ── Unified identifier OTP ────────────────────────────────────
 
-  sendOtp = async (req: Request, res: Response): Promise<void> => {
-    const body = sendEmailOtpSchema.parse(req.body);
-    const result = await this.userService.sendEmailOtp(body.email);
+  sendOtpByIdentifier = async (req: Request, res: Response): Promise<void> => {
+    const { identifier } = sendOtpByIdentifierSchema.parse(req.body);
+    const result = await this.userService.sendOtpByIdentifier(identifier);
     sendSuccess(res, {
-      message: "OTP sent to your email",
+      message: `OTP sent to your ${result.channel}`,
+      channel: result.channel,
       isNewUser: result.isNewUser,
     });
   };
 
-  verifyOtp = async (req: Request, res: Response): Promise<void> => {
-    const body = verifyEmailOtpSchema.parse(req.body);
+  verifyOtpByIdentifier = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    const { identifier, otp } = verifyOtpByIdentifierSchema.parse(req.body);
     const meta = {
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
       deviceId: req.headers["x-device-id"] as string | undefined,
     };
 
-    const { accessToken, refreshToken, user } =
-      await this.userService.verifyEmailOtp(body.email, body.otp, meta);
+    const { accessToken, refreshToken, user, channel } =
+      await this.userService.verifyOtpByIdentifier(identifier, otp, meta);
 
     res
       .cookie(JWT_COOKIE_NAME, accessToken, {
@@ -59,53 +61,7 @@ export class UserController {
       res,
       {
         message: user.isNewUser ? "Account created" : "Login successful",
-        user: {
-          id: user.id,
-          email: user.email,
-          profileStage: user.profileStage,
-        },
-        isNewUser: user.isNewUser,
-      },
-      user.isNewUser ? 201 : 200,
-    );
-  };
-
-  // ── Phone OTP ─────────────────────────────────────────────────
-
-  sendPhoneOtp = async (req: Request, res: Response): Promise<void> => {
-    const body = sendPhoneOtpSchema.parse(req.body);
-    const result = await this.userService.sendPhoneOtp(body.phone);
-    sendSuccess(res, {
-      message: "OTP sent to your phone",
-      isNewUser: result.isNewUser,
-    });
-  };
-
-  verifyPhoneOtp = async (req: Request, res: Response): Promise<void> => {
-    const body = verifyPhoneOtpSchema.parse(req.body);
-    const meta = {
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-      deviceId: req.headers["x-device-id"] as string | undefined,
-    };
-
-    const { accessToken, refreshToken, user } =
-      await this.userService.verifyPhoneOtp(body.phone, body.otp, meta);
-
-    res
-      .cookie(JWT_COOKIE_NAME, accessToken, {
-        ...JWT_COOKIE_OPTIONS,
-        maxAge: ACCESS_MAX_AGE,
-      })
-      .cookie(JWT_REFRESH_COOKIE_NAME, refreshToken, {
-        ...JWT_COOKIE_OPTIONS,
-        maxAge: REFRESH_MAX_AGE,
-      });
-
-    sendSuccess(
-      res,
-      {
-        message: user.isNewUser ? "Account created" : "Login successful",
+        channel,
         user: {
           id: user.id,
           email: user.email,
