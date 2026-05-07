@@ -7,12 +7,9 @@ export function aiAdminRoutes(controller: AiAdminController): Router {
   // ── Plans (public/internal read) ────────────────────────────
   router.get("/plans", controller.listPlans);
   router.get("/plans/slug/:slug", controller.getPlanBySlug);
-  router.get("/plans/:plan_id", controller.getPlan);
 
   // ── Plans (admin write) ─────────────────────────────────────
   router.get("/plans-all", controller.adminListPlans);
-  router.patch("/plans/:plan_id", controller.updatePlan);
-  router.delete("/plans/:plan_id", controller.deletePlan);
 
   // ── Plan Query Queue ────────────────────────────────────────
   router.post("/plans/query", controller.queryPlansFromLlm);
@@ -20,6 +17,11 @@ export function aiAdminRoutes(controller: AiAdminController): Router {
   router.get("/plans/query/:queue_id", controller.viewPendingQuery);
   router.patch("/plans/query/:queue_id/approve", controller.approvePlans);
   router.patch("/plans/query/:queue_id/reject", controller.rejectPlans);
+
+  // param route must come after all static /plans/* routes
+  router.get("/plans/:plan_id", controller.getPlan);
+  router.patch("/plans/:plan_id", controller.updatePlan);
+  router.delete("/plans/:plan_id", controller.deletePlan);
 
   // ── Providers & Verticals ───────────────────────────────────
   router.get("/providers", controller.listProviders);
@@ -40,11 +42,14 @@ export function aiAdminRoutes(controller: AiAdminController): Router {
   router.get("/analytics/top-plans", controller.getTopPlans);
   router.get("/analytics/success-rate", controller.getSuccessRate);
 
+  // ── Templates ───────────────────────────────────────────────
+  router.get("/templates/metadata", controller.getTemplatesMetadata);
+
   // ── Prompt Templates ────────────────────────────────────────
   router.get("/prompts", controller.listPrompts);
   router.post("/prompts", controller.createPrompt);
-  router.patch("/prompts/:template_id", controller.updatePrompt);
   router.patch("/prompts/:template_id/activate", controller.activatePrompt);
+  router.patch("/prompts/:template_id", controller.updatePrompt);
 
   // ── Audit Logs ──────────────────────────────────────────────
   router.get("/audit-logs", controller.listAuditLogs);

@@ -1,34 +1,37 @@
 import type { ProfileStage } from "@prisma/client";
 
-// Auth=20%, Personal=30%, Fact-Finding=50%
-const STAGE_PERCENTAGE: Record<ProfileStage, number> = {
-  auth_complete: 20,
-  personal_complete: 50,
-  fact_finding_income: 60,
-  fact_finding_expenses: 70,
-  fact_finding_assets: 80,
-  fact_finding_goals: 90,
-  fact_finding_risk: 100,
+// Temporary cast until `prisma generate` picks up the new ProfileStage enum values.
+type AnyStage = ProfileStage | string;
+
+const STAGE_PERCENTAGE: Record<string, number> = {
+  auth_complete: 10,
+  personal_complete: 20,
+  fact_finding_income_sources: 35,
+  fact_finding_dependents: 50,
+  fact_finding_income_amount: 62,
+  fact_finding_expenses: 75,
+  fact_finding_assets: 87,
   fact_finding_complete: 100,
   recommendations_ready: 100,
 };
 
-const NEXT_STEP: Record<ProfileStage, string> = {
+const NEXT_STEP: Record<string, string> = {
   auth_complete: "personal_details",
-  personal_complete: "fact_finding",
-  fact_finding_income: "fact_finding_expenses",
+  personal_complete: "fact_finding_income_sources",
+  fact_finding_income_sources: "fact_finding_dependents",
+  fact_finding_dependents: "fact_finding_income_amount",
+  fact_finding_income_amount: "fact_finding_expenses",
   fact_finding_expenses: "fact_finding_assets",
-  fact_finding_assets: "fact_finding_goals",
-  fact_finding_goals: "fact_finding_risk",
-  fact_finding_risk: "complete",
+  fact_finding_assets: "fact_finding_risk",
   fact_finding_complete: "complete",
   recommendations_ready: "complete",
 };
 
-export function getCompletionStatus(stage: ProfileStage) {
+export function getCompletionStatus(stage: AnyStage) {
+  const s = stage as string;
   return {
-    percentage: STAGE_PERCENTAGE[stage],
-    currentStage: stage,
-    nextStep: NEXT_STEP[stage],
+    percentage: STAGE_PERCENTAGE[s] ?? 0,
+    currentStage: s,
+    nextStep: NEXT_STEP[s] ?? "complete",
   };
 }

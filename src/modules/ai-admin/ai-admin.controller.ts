@@ -195,6 +195,13 @@ export class AiAdminController {
     sendSuccess(res, data);
   };
 
+  // ── Templates ───────────────────────────────────────────────
+
+  getTemplatesMetadata = async (req: Request, res: Response): Promise<void> => {
+    const data = await aiAdminGet("/admin/v1/templates/metadata");
+    sendSuccess(res, data);
+  };
+
   // ── AI Health ───────────────────────────────────────────────
 
   aiHealth = async (req: Request, res: Response): Promise<void> => {

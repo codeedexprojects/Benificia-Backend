@@ -15,16 +15,17 @@ model User {
   deletedAt       DateTime?    @map("deleted_at")
 
   // Relations
-  profile               UserProfile?
-  incomeProfile         IncomeProfile?
-  expenseProfile        ExpenseProfile?
-  assetLiabilityProfile AssetLiabilityProfile?
-  riskProfile           RiskProfile?
-  financialGoals        FinancialGoal[]
-  authSessions          AuthSession[]
-  otpLogs               OtpLog[]
-  aiRecommendations     AiRecommendation[]
-  insuranceInterests    InsuranceInterest[]
+  profile                UserProfile?
+  incomeSourcesProfile   IncomeSourcesProfile?
+  financeProfile         FinanceProfile?
+  incomeProfile          IncomeProfile?
+  expenseProfile         ExpenseProfile?
+  assetLiabilityProfile  AssetLiabilityProfile?
+  riskProfile            RiskProfile?
+  authSessions           AuthSession[]
+  otpLogs                OtpLog[]
+  aiRecommendations      AiRecommendation[]
+  insuranceInterests     InsuranceInterest[]
 
   @@index([email])
   @@index([profileStage])
