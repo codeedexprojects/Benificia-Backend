@@ -3,20 +3,52 @@
 // MODULE 3 — Financial Fact Finding
 // ════════════════════════════════════════════════════════════
 
+// Screen: Finance 1 — income sources (multi-select)
+model IncomeSourcesProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  incomeSources IncomeSource[] @map("income_sources")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("income_sources_profiles")
+}
+
+// Screen: Finance 2 — dependents, liabilities, insurance
+model FinanceProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  numberOfDependents     Int                    @default(0) @map("number_of_dependents")
+  liabilityTypes         LiabilityType[]        @map("liability_types")
+  insuranceCoverageTypes InsuranceCoverageType[] @map("insurance_coverage_types")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("finance_profiles")
+}
+
+// Screen: Finance 3 — total monthly income amount
 model IncomeProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  // Which income sources the user has (multi-select)
-  incomeSources IncomeSource[] @map("income_sources")
-
-  // Amounts — monthly (frontend converts yearly → monthly before sending)
-  salaryMonthly   Float @default(0) @map("salary_monthly")
+  // Amounts — monthly (frontend divides yearly by 12 before sending)
+  salaryMonthly    Float @default(0) @map("salary_monthly")
   freelanceMonthly Float @default(0) @map("freelance_monthly")
-  businessMonthly Float @default(0) @map("business_monthly")
-  passiveMonthly  Float @default(0) @map("passive_monthly")
-  otherMonthly    Float @default(0) @map("other_monthly")
-  totalMonthly    Float @default(0) @map("total_monthly")
+  businessMonthly  Float @default(0) @map("business_monthly")
+  passiveMonthly   Float @default(0) @map("passive_monthly")
+  otherMonthly     Float @default(0) @map("other_monthly")
+  totalMonthly     Float @default(0) @map("total_monthly")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -47,20 +79,14 @@ model ExpenseProfile {
   @@map("expense_profiles")
 }
 
+// Screen: Finance 5 — assets list
 model AssetLiabilityProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  // Liability types user has (checkboxes)
-  liabilityTypes LiabilityType[] @map("liability_types")
-
-  // Insurance coverage types user has (checkboxes)
-  insuranceCoverageTypes InsuranceCoverageType[] @map("insurance_coverage_types")
-
   // Total amounts (summed from UserAsset entries)
-  totalAssets      Float @default(0) @map("total_assets")
-  totalLiabilities Float @default(0) @map("total_liabilities")
-  netWorth         Float @default(0) @map("net_worth")
+  totalAssets Float @default(0) @map("total_assets")
+  netWorth    Float @default(0) @map("net_worth")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -85,24 +111,6 @@ model UserAsset {
   @@map("user_assets")
 }
 
-model FinancialGoal {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  type         GoalType
-  targetAmount Float    @map("target_amount")
-  targetYears  Int      @map("target_years")
-  currentSaved Float    @default(0) @map("current_saved")
-  priority     Int      @default(1)
-  isAchieved   Boolean  @default(false) @map("is_achieved")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([type])
-  @@map("financial_goals")
-}
 
 model RiskProfile {
   id     String @id @default(uuid()) @db.Uuid

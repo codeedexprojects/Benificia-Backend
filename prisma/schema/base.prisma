@@ -16,11 +16,13 @@ datasource db {
 enum ProfileStage {
   auth_complete
   personal_complete
-  fact_finding_income
+  fact_finding_income_sources
+  fact_finding_dependents
+  fact_finding_liabilities
+  fact_finding_insurance
+  fact_finding_income_amount
   fact_finding_expenses
   fact_finding_assets
-  fact_finding_goals
-  fact_finding_risk
   fact_finding_complete
   recommendations_ready
 }

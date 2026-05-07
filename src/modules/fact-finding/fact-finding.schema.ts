@@ -1,17 +1,57 @@
 import { z } from "zod";
 
-// ── Step 1: Income ────────────────────────────────────────────
+// ── Screen: Finance 1 — Income Sources ───────────────────────
+// "How do you generate income?" — multi-select
 
-const incomeSourceEnum = z.enum(
-  [
-    "full_time_salary",
-    "freelance_contract",
-    "business_owner",
-    "passive_income",
-    "other",
-  ],
-  { error: "Invalid income source" },
-);
+export const incomeSourcesSchema = z.object({
+  incomeSources: z
+    .array(
+      z.enum(
+        [
+          "full_time_salary",
+          "freelance_contract",
+          "business_owner",
+          "passive_income",
+          "other",
+        ],
+        { error: "Invalid income source" },
+      ),
+    )
+    .min(1, "Please select at least one income source"),
+});
+
+// ── Screen: Finance 2 — Dependents, Liabilities, Insurance ───
+// "How many people depend on your income?"
+// "Do you have any liabilities?"
+// "What is your insurance coverage?"
+
+export const financeProfileSchema = z.object({
+  numberOfDependents: z
+    .number({ error: "Number of dependents must be a number" })
+    .int("Must be a whole number")
+    .min(0, "Cannot be negative")
+    .max(20, "Please enter a valid number"),
+
+  liabilityTypes: z
+    .array(
+      z.enum(["credit_card_debt", "personal_loan", "mortgage"], {
+        error: "Invalid liability type",
+      }),
+    )
+    .default([]),
+
+  insuranceCoverageTypes: z
+    .array(
+      z.enum(["health_insurance", "life_insurance", "property_insurance"], {
+        error: "Invalid insurance coverage type",
+      }),
+    )
+    .default([]),
+});
+
+// ── Screen: Finance 3 — Income Amount ────────────────────────
+// "What is your total monthly income?" — per-source amounts
+// Frontend sends monthly values (divides yearly by 12 before sending)
 
 const amount = (label: string) =>
   z
@@ -19,13 +59,8 @@ const amount = (label: string) =>
     .min(0, `${label} cannot be negative`)
     .default(0);
 
-export const incomeSchema = z
+export const incomeAmountSchema = z
   .object({
-    incomeSources: z
-      .array(incomeSourceEnum)
-      .min(1, "Please select at least one income source"),
-
-    // Amounts — always monthly (frontend divides yearly by 12)
     salaryMonthly: amount("Salary"),
     freelanceMonthly: amount("Freelance income"),
     businessMonthly: amount("Business income"),
@@ -33,116 +68,55 @@ export const incomeSchema = z
     otherMonthly: amount("Other income"),
   })
   .refine(
-    (d) => {
-      // At least one source must have a non-zero amount
-      return (
-        d.salaryMonthly +
-          d.freelanceMonthly +
-          d.businessMonthly +
-          d.passiveMonthly +
-          d.otherMonthly >
-        0
-      );
-    },
+    (d) =>
+      d.salaryMonthly +
+        d.freelanceMonthly +
+        d.businessMonthly +
+        d.passiveMonthly +
+        d.otherMonthly >
+      0,
     { message: "Please enter at least one income amount" },
   );
 
-// ── Step 2: Expenses ─────────────────────────────────────────
+// ── Screen: Finance 4 — Monthly Expenses ─────────────────────
+// "How much do you spend monthly?"
+// Frontend sends monthly value (divides yearly by 12 before sending)
 
 export const expensesSchema = z.object({
-  // Total monthly spend — frontend converts yearly → monthly before sending
   totalMonthly: z
     .number({ error: "Monthly spending must be a number" })
     .min(0, "Monthly spending cannot be negative"),
 });
 
-// ── Step 3: Assets & Liabilities ─────────────────────────────
-
-const assetTypeEnum = z.enum(
-  [
-    "cash_savings",
-    "fixed_deposit",
-    "mutual_funds_stocks",
-    "gold",
-    "real_estate",
-    "epf_ppf",
-    "other",
-  ],
-  { error: "Invalid asset type" },
-);
-
-const liabilityTypeEnum = z.enum(
-  ["credit_card_debt", "personal_loan", "mortgage"],
-  { error: "Invalid liability type" },
-);
-
-const insuranceCoverageTypeEnum = z.enum(
-  ["health_insurance", "life_insurance", "property_insurance"],
-  { error: "Invalid insurance coverage type" },
-);
-
-const assetItemSchema = z.object({
-  assetType: assetTypeEnum,
-  amount: z
-    .number({ error: "Amount must be a number" })
-    .min(0, "Amount cannot be negative"),
-});
+// ── Screen: Finance 5 — Assets ───────────────────────────────
+// "What are your total assets?" — type + amount list
+// Skippable: assets array can be empty
 
 export const assetsSchema = z.object({
-  // Dynamic list of assets (type + amount pairs)
-  assets: z.array(assetItemSchema).min(1, "Please add at least one asset"),
-
-  // Which liability types the user has
-  liabilityTypes: z.array(liabilityTypeEnum).default([]),
-
-  // Which insurance coverage types the user has
-  insuranceCoverageTypes: z.array(insuranceCoverageTypeEnum).default([]),
+  assets: z
+    .array(
+      z.object({
+        assetType: z.enum(
+          [
+            "cash_savings",
+            "fixed_deposit",
+            "mutual_funds_stocks",
+            "gold",
+            "real_estate",
+            "epf_ppf",
+            "other",
+          ],
+          { error: "Invalid asset type" },
+        ),
+        amount: z
+          .number({ error: "Amount must be a number" })
+          .min(0, "Amount cannot be negative"),
+      }),
+    )
+    .default([]),
 });
 
-// ── Step 4: Goals ─────────────────────────────────────────────
-
-const goalTypeEnum = z.enum(
-  [
-    "emergency_fund",
-    "child_education",
-    "house_purchase",
-    "retirement",
-    "wealth_creation",
-    "debt_repayment",
-  ],
-  { error: "Invalid goal type" },
-);
-
-const goalItemSchema = z.object({
-  type: goalTypeEnum,
-  targetAmount: z
-    .number({ error: "Target amount must be a number" })
-    .positive("Target amount must be greater than zero"),
-  targetYears: z
-    .number()
-    .int("Target years must be a whole number")
-    .min(1, "Target years must be at least 1")
-    .max(40, "Target years cannot exceed 40"),
-  currentSaved: amount("Current saved amount"),
-  priority: z.number().int().min(1).max(10).default(1),
-});
-
-export const goalsSchema = z
-  .object({
-    goals: z
-      .array(goalItemSchema)
-      .min(1, "Please add at least one financial goal")
-      .max(6, "You can add up to 6 financial goals"),
-  })
-  .refine(
-    (data) => {
-      const types = data.goals.map((g) => g.type);
-      return new Set(types).size === types.length;
-    },
-    { message: "Each goal type can only be added once", path: ["goals"] },
-  );
-
-// ── Step 5: Risk Profile ──────────────────────────────────────
+// ── Screen: Risk — all 5 questions submitted together ────────
 
 export const riskSchema = z.object({
   // Q1: If your portfolio dropped 20% you would…

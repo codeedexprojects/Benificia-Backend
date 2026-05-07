@@ -1,25 +1,25 @@
 import type { PrismaClient } from "@prisma/client";
 import type { z } from "zod";
 import type {
-  incomeSchema,
+  incomeSourcesSchema,
+  financeProfileSchema,
+  incomeAmountSchema,
   expensesSchema,
   assetsSchema,
-  goalsSchema,
   riskSchema,
 } from "./fact-finding.schema";
 
-type IncomeData = z.infer<typeof incomeSchema> & { totalMonthly: number };
+type IncomeSourcesData = z.infer<typeof incomeSourcesSchema>;
+type FinanceProfileData = z.infer<typeof financeProfileSchema>;
+type IncomeAmountData = z.infer<typeof incomeAmountSchema> & {
+  totalMonthly: number;
+};
 type ExpensesData = z.infer<typeof expensesSchema> & {
   monthlySurplus: number;
   savingsRatioPct: number;
 };
 type AssetsInput = z.infer<typeof assetsSchema>;
-type AssetsComputed = {
-  totalAssets: number;
-  totalLiabilities: number;
-  netWorth: number;
-};
-type GoalItem = z.infer<typeof goalsSchema>["goals"][number];
+type AssetsComputed = { totalAssets: number; netWorth: number };
 type RiskData = z.infer<typeof riskSchema> & {
   riskCategory: "conservative" | "moderate" | "aggressive";
 };
@@ -34,20 +34,84 @@ export class FactFindingRepository {
     });
   }
 
-  findIncomeProfile(userId: string) {
+  findIncomeAmountProfile(userId: string) {
     return this.db.incomeProfile.findUnique({
       where: { userId },
       select: { totalMonthly: true },
     });
   }
 
-  async upsertIncome(
+  // ── Screen: Finance 1 — Income Sources ───────────────────────
+
+  async upsertIncomeSources(
     userId: string,
-    data: IncomeData,
+    data: IncomeSourcesData,
+    shouldAdvance: boolean,
+  ): Promise<void> {
+    await this.db.$transaction([
+      this.db.incomeSourcesProfile.upsert({
+        where: { userId },
+        create: { userId, incomeSources: data.incomeSources },
+        update: { incomeSources: data.incomeSources },
+      }),
+      ...(shouldAdvance
+        ? [
+            this.db.user.update({
+              where: { id: userId },
+              data: { profileStage: "fact_finding_income_sources" },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  // ── Screen: Finance 2 — Dependents, Liabilities, Insurance ───
+
+  async upsertFinanceProfile(
+    userId: string,
+    data: FinanceProfileData,
+    shouldAdvance: boolean,
+  ): Promise<void> {
+    await this.db.$transaction([
+      this.db.financeProfile.upsert({
+        where: { userId },
+        create: {
+          userId,
+          numberOfDependents: data.numberOfDependents,
+          liabilityTypes: data.liabilityTypes,
+          insuranceCoverageTypes: data.insuranceCoverageTypes,
+        },
+        update: {
+          numberOfDependents: data.numberOfDependents,
+          liabilityTypes: data.liabilityTypes,
+          insuranceCoverageTypes: data.insuranceCoverageTypes,
+        },
+      }),
+      // Also sync numberOfDependents to UserProfile
+      this.db.userProfile.upsert({
+        where: { userId },
+        create: { userId, numberOfDependents: data.numberOfDependents },
+        update: { numberOfDependents: data.numberOfDependents },
+      }),
+      ...(shouldAdvance
+        ? [
+            this.db.user.update({
+              where: { id: userId },
+              data: { profileStage: "fact_finding_dependents" },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  // ── Screen: Finance 3 — Income Amount ────────────────────────
+
+  async upsertIncomeAmount(
+    userId: string,
+    data: IncomeAmountData,
     shouldAdvance: boolean,
   ): Promise<void> {
     const {
-      incomeSources,
       salaryMonthly,
       freelanceMonthly,
       businessMonthly,
@@ -60,7 +124,6 @@ export class FactFindingRepository {
         where: { userId },
         create: {
           userId,
-          incomeSources,
           salaryMonthly,
           freelanceMonthly,
           businessMonthly,
@@ -69,7 +132,6 @@ export class FactFindingRepository {
           totalMonthly,
         },
         update: {
-          incomeSources,
           salaryMonthly,
           freelanceMonthly,
           businessMonthly,
@@ -82,12 +144,14 @@ export class FactFindingRepository {
         ? [
             this.db.user.update({
               where: { id: userId },
-              data: { profileStage: "fact_finding_income" },
+              data: { profileStage: "fact_finding_income_amount" },
             }),
           ]
         : []),
     ]);
   }
+
+  // ── Screen: Finance 4 — Expenses ─────────────────────────────
 
   async upsertExpenses(
     userId: string,
@@ -112,6 +176,8 @@ export class FactFindingRepository {
     ]);
   }
 
+  // ── Screen: Finance 5 — Assets ───────────────────────────────
+
   async upsertAssets(
     userId: string,
     input: AssetsInput,
@@ -122,17 +188,11 @@ export class FactFindingRepository {
       where: { userId },
       create: {
         userId,
-        liabilityTypes: input.liabilityTypes,
-        insuranceCoverageTypes: input.insuranceCoverageTypes,
         totalAssets: computed.totalAssets,
-        totalLiabilities: computed.totalLiabilities,
         netWorth: computed.netWorth,
       },
       update: {
-        liabilityTypes: input.liabilityTypes,
-        insuranceCoverageTypes: input.insuranceCoverageTypes,
         totalAssets: computed.totalAssets,
-        totalLiabilities: computed.totalLiabilities,
         netWorth: computed.netWorth,
       },
     });
@@ -141,13 +201,17 @@ export class FactFindingRepository {
       this.db.userAsset.deleteMany({
         where: { assetLiabilityProfileId: existing.id },
       }),
-      this.db.userAsset.createMany({
-        data: input.assets.map((a) => ({
-          assetLiabilityProfileId: existing.id,
-          assetType: a.assetType,
-          amount: a.amount,
-        })),
-      }),
+      ...(input.assets.length > 0
+        ? [
+            this.db.userAsset.createMany({
+              data: input.assets.map((a) => ({
+                assetLiabilityProfileId: existing.id,
+                assetType: a.assetType,
+                amount: a.amount,
+              })),
+            }),
+          ]
+        : []),
       ...(shouldAdvance
         ? [
             this.db.user.update({
@@ -159,33 +223,7 @@ export class FactFindingRepository {
     ]);
   }
 
-  async replaceGoals(
-    userId: string,
-    goals: GoalItem[],
-    shouldAdvance: boolean,
-  ): Promise<void> {
-    await this.db.$transaction([
-      this.db.financialGoal.deleteMany({ where: { userId } }),
-      this.db.financialGoal.createMany({
-        data: goals.map((g) => ({
-          userId,
-          type: g.type,
-          targetAmount: g.targetAmount,
-          targetYears: g.targetYears,
-          currentSaved: g.currentSaved,
-          priority: g.priority,
-        })),
-      }),
-      ...(shouldAdvance
-        ? [
-            this.db.user.update({
-              where: { id: userId },
-              data: { profileStage: "fact_finding_goals" },
-            }),
-          ]
-        : []),
-    ]);
-  }
+  // ── Risk ──────────────────────────────────────────────────────
 
   async upsertRisk(userId: string, data: RiskData): Promise<void> {
     const {
@@ -222,5 +260,90 @@ export class FactFindingRepository {
         data: { profileStage: "fact_finding_complete" },
       }),
     ]);
+  }
+
+  // ── GET /status — all saved fact-finding data ─────────────────
+
+  async findAllFactFindingData(userId: string) {
+    const [
+      user,
+      incomeSources,
+      financeProfile,
+      incomeAmount,
+      expenses,
+      assetProfile,
+      risk,
+    ] = await Promise.all([
+      this.db.user.findUnique({
+        where: { id: userId },
+        select: { profileStage: true },
+      }),
+      this.db.incomeSourcesProfile.findUnique({
+        where: { userId },
+        select: { incomeSources: true },
+      }),
+      this.db.financeProfile.findUnique({
+        where: { userId },
+        select: {
+          numberOfDependents: true,
+          liabilityTypes: true,
+          insuranceCoverageTypes: true,
+        },
+      }),
+      this.db.incomeProfile.findUnique({
+        where: { userId },
+        select: {
+          salaryMonthly: true,
+          freelanceMonthly: true,
+          businessMonthly: true,
+          passiveMonthly: true,
+          otherMonthly: true,
+          totalMonthly: true,
+        },
+      }),
+      this.db.expenseProfile.findUnique({
+        where: { userId },
+        select: {
+          totalMonthly: true,
+          monthlySurplus: true,
+          savingsRatioPct: true,
+        },
+      }),
+      this.db.assetLiabilityProfile.findUnique({
+        where: { userId },
+        select: {
+          totalAssets: true,
+          netWorth: true,
+          assets: { select: { assetType: true, amount: true } },
+        },
+      }),
+      this.db.riskProfile.findUnique({
+        where: { userId },
+        select: {
+          portfolioDrop: true,
+          investmentStyle: true,
+          financialAims: true,
+          timeHorizon: true,
+          marketFeeling: true,
+          riskCategory: true,
+        },
+      }),
+    ]);
+
+    return {
+      profileStage: user?.profileStage ?? null,
+      incomeSources: incomeSources ?? null,
+      financeProfile: financeProfile ?? null,
+      incomeAmount: incomeAmount ?? null,
+      expenses: expenses ?? null,
+      assets: assetProfile
+        ? {
+            assets: assetProfile.assets,
+            totalAssets: assetProfile.totalAssets,
+            netWorth: assetProfile.netWorth,
+          }
+        : null,
+      risk: risk ?? null,
+    };
   }
 }
