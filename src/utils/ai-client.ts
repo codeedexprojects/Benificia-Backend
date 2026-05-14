@@ -34,7 +34,7 @@ export async function callAiRecommendations(payload: {
   request_id: string;
   vertical: string;
   user_context: Record<string, unknown>;
-  llm_provider: string;
+  llm_provider?: string | null;
   top_n: number;
 }): Promise<AiRecommendationResponse> {
   try {

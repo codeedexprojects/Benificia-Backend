@@ -122,6 +122,13 @@ export class UserController {
     sendSuccess(res, { url });
   };
 
+  // ── App state (routing decision) ──────────────────────────────
+
+  getAppState = async (req: Request, res: Response): Promise<void> => {
+    const result = await this.userService.getAppState(req.user!.id);
+    sendSuccess(res, result);
+  };
+
   // ── Profile completion ─────────────────────────────────────────
 
   getProfile = async (req: Request, res: Response): Promise<void> => {

@@ -10,7 +10,7 @@ model UserProfile {
   // Identity
   fullName   String? @map("full_name") @db.VarChar(255)
   gender     Gender?
-  yob        Int?    @map("year_of_birth")
+  age        Int?
   photoS3Key String? @map("photo_s3_key") @db.VarChar(500)
 
   // Address
@@ -24,9 +24,7 @@ model UserProfile {
   country      String  @default("India") @db.VarChar(100)
 
   // About You (fact-finding step 0)
-  maritalStatus      MaritalStatus? @map("marital_status")
-  numberOfMembers    Int            @default(1) @map("number_of_members")
-  numberOfDependents Int            @default(0) @map("number_of_dependents")
+  maritalStatus MaritalStatus? @map("marital_status")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

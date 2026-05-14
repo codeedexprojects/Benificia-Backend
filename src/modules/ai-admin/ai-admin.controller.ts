@@ -79,9 +79,22 @@ export class AiAdminController {
   };
 
   approvePlans = async (req: Request, res: Response): Promise<void> => {
+    const queueId = req.params["queue_id"];
+
+    // Fetch the queue item to get its query_text — the AI server requires
+    // either `query` or `template` in the approve body.
+    const queueItem = await aiAdminGet<{
+      query_text?: string;
+      provider_name?: string;
+    }>(`/admin/v1/plans/query/${queueId}`);
+
+    const body: Record<string, unknown> = { admin_id: req.admin!.id };
+    if (queueItem.query_text) body["query"] = queueItem.query_text;
+    if (queueItem.provider_name) body["provider"] = queueItem.provider_name;
+
     const data = await aiAdminPatch(
-      `/admin/v1/plans/query/${req.params["queue_id"]}/approve`,
-      { ...req.body, admin_id: req.admin!.id },
+      `/admin/v1/plans/query/${queueId}/approve`,
+      body,
     );
     sendSuccess(res, data);
   };

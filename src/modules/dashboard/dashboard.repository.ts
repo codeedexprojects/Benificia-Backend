@@ -19,26 +19,19 @@ export class DashboardRepository {
             savingsRatioPct: true,
           },
         },
+        financeProfile: {
+          select: { liabilityTypes: true, insuranceCoverageTypes: true },
+        },
         assetLiabilityProfile: {
           select: {
+            residentialProperty: true,
+            investment: true,
+            savingsBank: true,
+            goldJewelry: true,
+            retirementFunds: true,
+            otherAssets: true,
             totalAssets: true,
-            totalLiabilities: true,
-            netWorth: true,
-            liabilityTypes: true,
-            insuranceCoverageTypes: true,
-            assets: { select: { assetType: true, amount: true } },
           },
-        },
-        financialGoals: {
-          select: {
-            type: true,
-            targetAmount: true,
-            currentSaved: true,
-            targetYears: true,
-            priority: true,
-            isAchieved: true,
-          },
-          orderBy: { priority: "asc" },
         },
         riskProfile: {
           select: { riskCategory: true },
@@ -67,14 +60,18 @@ export class DashboardRepository {
     return this.prisma.user.findUnique({
       where: { id: userId },
       select: {
+        financeProfile: {
+          select: { liabilityTypes: true, insuranceCoverageTypes: true },
+        },
         assetLiabilityProfile: {
           select: {
+            residentialProperty: true,
+            investment: true,
+            savingsBank: true,
+            goldJewelry: true,
+            retirementFunds: true,
+            otherAssets: true,
             totalAssets: true,
-            totalLiabilities: true,
-            netWorth: true,
-            liabilityTypes: true,
-            insuranceCoverageTypes: true,
-            assets: { select: { assetType: true, amount: true } },
           },
         },
       },
@@ -86,33 +83,8 @@ export class DashboardRepository {
       where: { id: userId },
       select: {
         incomeProfile: { select: { totalMonthly: true } },
-        assetLiabilityProfile: {
-          select: { insuranceCoverageTypes: true },
-        },
-        profile: {
-          select: { numberOfDependents: true, numberOfMembers: true },
-        },
-      },
-    });
-  }
-
-  getGoalsData(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        incomeProfile: { select: { totalMonthly: true } },
-        expenseProfile: { select: { monthlySurplus: true } },
-        financialGoals: {
-          select: {
-            id: true,
-            type: true,
-            targetAmount: true,
-            currentSaved: true,
-            targetYears: true,
-            priority: true,
-            isAchieved: true,
-          },
-          orderBy: { priority: "asc" },
+        financeProfile: {
+          select: { insuranceCoverageTypes: true, numberOfDependents: true },
         },
       },
     });

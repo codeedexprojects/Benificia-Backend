@@ -68,20 +68,19 @@ export const confirmPhotoUploadSchema = z.object({
 // ── About You (fact-finding step 0) ──────────────────────────
 
 export const personalDetailsSchema = z.object({
-  gender: z.enum(["male", "female", "other", "prefer_not_to_say"], {
-    error: "Please select a valid gender",
-  }),
-  yob: z
+  gender: z
+    .enum(["male", "female", "other", "prefer_not_to_say"], {
+      error: "Please select a valid gender",
+    })
+    .optional(),
+  age: z
     .number()
-    .int("Year of birth must be a whole number")
-    .min(1920, "Please enter a valid year of birth")
-    .max(new Date().getFullYear() - 18, "You must be at least 18 years old"),
-  maritalStatus: z.enum(["single", "married", "divorced", "widowed"], {
-    error: "Please select a valid marital status",
-  }),
-  numberOfMembers: z
-    .number()
-    .int("Number of members must be a whole number")
-    .min(1, "Household must have at least 1 member")
-    .max(20, "Please enter a valid number of members"),
+    .int("Age must be a whole number")
+    .min(18, "You must be at least 18 years old")
+    .max(100, "Please enter a valid age"),
+  maritalStatus: z
+    .enum(["single", "married", "divorced", "widowed"], {
+      error: "Please select a valid marital status",
+    })
+    .optional(),
 });

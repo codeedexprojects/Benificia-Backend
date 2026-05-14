@@ -41,6 +41,17 @@ import type { personalDetailsSchema } from "./user.schema";
 
 type RedisClient = ReturnType<typeof createClient>;
 
+const STAGE_TO_STEP: Record<string, string> = {
+  personal_complete: "income_sources",
+  fact_finding_income_sources: "finance_profile",
+  fact_finding_dependents: "income_amount",
+  fact_finding_liabilities: "income_amount",
+  fact_finding_insurance: "income_amount",
+  fact_finding_income_amount: "expenses",
+  fact_finding_expenses: "assets",
+  fact_finding_assets: "risk",
+};
+
 interface SessionCache {
   userId: string;
   email: string | null;
@@ -555,6 +566,40 @@ export class UserService {
     return {
       message: "Personal details saved successfully",
       profileStage: "personal_complete",
+    };
+  }
+
+  async getAppState(userId: string) {
+    const data = await this.userRepository.getAppStateData(userId);
+    if (!data) throw new NotFoundError("User not found");
+
+    const stage = data.profileStage as string;
+    const hasRecommendations = (data.aiRecommendations?.length ?? 0) > 0;
+
+    const COMPLETE_STAGES = new Set([
+      "fact_finding_complete",
+      "recommendations_ready",
+    ]);
+    const ONBOARDING_STAGES = new Set(["auth_complete"]);
+
+    let destination: "onboarding" | "fact_finding" | "dashboard";
+    let resumeStep: string | null = null;
+
+    if (COMPLETE_STAGES.has(stage)) {
+      destination = "dashboard";
+    } else if (ONBOARDING_STAGES.has(stage)) {
+      destination = "onboarding";
+    } else {
+      destination = "fact_finding";
+      resumeStep = STAGE_TO_STEP[stage] ?? "income_sources";
+    }
+
+    return {
+      destination,
+      profileStage: stage,
+      factFindingComplete: COMPLETE_STAGES.has(stage),
+      hasRecommendations,
+      resumeStep,
     };
   }
 

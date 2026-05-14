@@ -18,10 +18,14 @@ import { recommendationRoutes } from "./recommendation.routes";
 const router = Router();
 const { userController } = new UserContainer(prisma, redis, ses, s3);
 const uploadController = new UploadController(new UploadService(s3));
-const { factFindingController } = new FactFindingContainer(prisma);
 const { healthController } = new HealthContainer(prisma);
 const { dashboardController } = new DashboardContainer(prisma);
-const { recommendationController } = new RecommendationContainer(prisma);
+const recommendationContainer = new RecommendationContainer(prisma);
+const { recommendationController } = recommendationContainer;
+const { factFindingController } = new FactFindingContainer(
+  prisma,
+  recommendationContainer.recommendationService,
+);
 
 router.use("/auth", authRoutes(userController));
 router.use("/profile", userRoutes(userController));

@@ -42,11 +42,10 @@ model IncomeProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  // Amounts — monthly (frontend divides yearly by 12 before sending)
+  // Amounts — monthly
   salaryMonthly    Float @default(0) @map("salary_monthly")
   freelanceMonthly Float @default(0) @map("freelance_monthly")
   businessMonthly  Float @default(0) @map("business_monthly")
-  passiveMonthly   Float @default(0) @map("passive_monthly")
   otherMonthly     Float @default(0) @map("other_monthly")
   totalMonthly     Float @default(0) @map("total_monthly")
 
@@ -79,36 +78,28 @@ model ExpenseProfile {
   @@map("expense_profiles")
 }
 
-// Screen: Finance 5 — assets list
+// Screen: Finance 5 — assets
 model AssetLiabilityProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  // Total amounts (summed from UserAsset entries)
+  residentialProperty Float @default(0) @map("residential_property")
+  investment          Float @default(0)
+  savingsBank         Float @default(0) @map("savings_bank")
+  goldJewelry         Float @default(0) @map("gold_jewelry")
+  retirementFunds     Float @default(0) @map("retirement_funds")
+  otherAssets         Float @default(0) @map("other_assets")
+
+  // Computed total
   totalAssets Float @default(0) @map("total_assets")
-  netWorth    Float @default(0) @map("net_worth")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assets UserAsset[]
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("asset_liability_profiles")
-}
-
-model UserAsset {
-  id                      String                @id @default(uuid()) @db.Uuid
-  assetLiabilityProfileId String                @map("asset_liability_profile_id") @db.Uuid
-  assetType               AssetType             @map("asset_type")
-  amount                  Float
-  createdAt               DateTime              @default(now()) @map("created_at")
-
-  profile AssetLiabilityProfile @relation(fields: [assetLiabilityProfileId], references: [id], onDelete: Cascade)
-
-  @@index([assetLiabilityProfileId])
-  @@map("user_assets")
 }
 
 

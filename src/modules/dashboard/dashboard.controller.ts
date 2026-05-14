@@ -27,9 +27,11 @@ export class DashboardController {
     sendSuccess(res, result);
   };
 
-  getGoalsTracker = async (req: Request, res: Response): Promise<void> => {
-    const result = await this.dashboardService.getGoalsTracker(req.user!.id);
-    sendSuccess(res, result);
+  getGoalsTracker = async (_req: Request, res: Response): Promise<void> => {
+    sendSuccess(res, {
+      available: false,
+      message: "Goals tracker is not available in this version.",
+    });
   };
 
   getRiskProfile = async (req: Request, res: Response): Promise<void> => {
