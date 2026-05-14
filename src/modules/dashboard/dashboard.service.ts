@@ -1,7 +1,7 @@
 import type { DashboardRepository } from "./dashboard.repository";
 import { getCompletionStatus } from "../../utils/profile-completion";
 import { NotFoundError } from "../../utils/errors";
-import type { InsuranceCoverageType, AssetType } from "@prisma/client";
+import type { InsuranceCoverageType } from "@prisma/client";
 
 // ── Health score weights ──────────────────────────────────────
 const WEIGHT_SAVINGS_RATE = 30;
@@ -15,7 +15,6 @@ function scoreSavingsRate(pct: number) {
 }
 function scoreDebtLoad(hasDebts: boolean, savingsRatioPct: number) {
   if (!hasDebts) return WEIGHT_DEBT_LOAD;
-  // Approximate from savings ratio — lower surplus suggests heavier debt load
   if (savingsRatioPct >= 30) return WEIGHT_DEBT_LOAD;
   if (savingsRatioPct <= 0) return 0;
   return Math.round((savingsRatioPct / 30) * WEIGHT_DEBT_LOAD);
@@ -31,24 +30,6 @@ function scoreInsurance(coverageTypes: InsuranceCoverageType[]) {
   const hasHealth = coverageTypes.includes("health_insurance");
   const ratio = ((hasLife ? 1 : 0) + (hasHealth ? 1 : 0)) / 2;
   return Math.round(ratio * WEIGHT_INSURANCE);
-}
-function scoreGoals(goals: { targetAmount: number; currentSaved: number }[]) {
-  if (!goals.length) return 0;
-  const avg =
-    goals.reduce(
-      (s, g) =>
-        s +
-        Math.min(g.targetAmount > 0 ? g.currentSaved / g.targetAmount : 0, 1),
-      0,
-    ) / goals.length;
-  return Math.round(avg * WEIGHT_GOALS);
-}
-
-function assetAmountByType(
-  assets: { assetType: AssetType; amount: number }[],
-  type: AssetType,
-) {
-  return assets.find((a) => a.assetType === type)?.amount ?? 0;
 }
 
 // ── Risk profile meta ─────────────────────────────────────────
@@ -78,25 +59,30 @@ const RISK_META = {
   },
 };
 
-const ASSET_TYPE_LABELS: Record<AssetType, string> = {
-  cash_savings: "Cash & Savings",
-  fixed_deposit: "Fixed Deposits",
-  mutual_funds_stocks: "Mutual Funds & Stocks",
-  gold: "Gold",
-  real_estate: "Real Estate",
-  epf_ppf: "EPF / PPF",
-  other: "Other Assets",
+type AssetSnapshot = {
+  residentialProperty: number;
+  investment: number;
+  savingsBank: number;
+  goldJewelry: number;
+  retirementFunds: number;
+  otherAssets: number;
+  totalAssets: number;
 };
 
-const ASSET_COLORS: Record<AssetType, string> = {
-  cash_savings: "#22C55E",
-  fixed_deposit: "#3B82F6",
-  mutual_funds_stocks: "#8B5CF6",
-  gold: "#EAB308",
-  real_estate: "#F97316",
-  epf_ppf: "#06B6D4",
-  other: "#6B7280",
-};
+function assetComposition(a: AssetSnapshot) {
+  return [
+    {
+      label: "Residential Property",
+      amount: a.residentialProperty,
+      color: "#F97316",
+    },
+    { label: "Investment", amount: a.investment, color: "#8B5CF6" },
+    { label: "Savings & Bank", amount: a.savingsBank, color: "#22C55E" },
+    { label: "Gold & Jewelry", amount: a.goldJewelry, color: "#EAB308" },
+    { label: "Retirement Funds", amount: a.retirementFunds, color: "#06B6D4" },
+    { label: "Other Assets", amount: a.otherAssets, color: "#6B7280" },
+  ].filter((item) => item.amount > 0);
+}
 
 export class DashboardService {
   constructor(private readonly repo: DashboardRepository) {}
@@ -110,28 +96,25 @@ export class DashboardService {
     const income = data.incomeProfile;
     const expense = data.expenseProfile;
     const assets = data.assetLiabilityProfile;
-    const goals = data.financialGoals;
+    const finance = data.financeProfile;
 
     const monthlyIncome = income?.totalMonthly ?? 0;
     const monthlyExpenses = expense?.totalMonthly ?? 0;
-    const cashAmount = assets
-      ? assetAmountByType(assets.assets, "cash_savings")
-      : 0;
+    const cashAmount = assets?.savingsBank ?? 0;
 
     const scoreBreakdown = {
       savingsRate:
         income && expense ? scoreSavingsRate(expense.savingsRatioPct) : 0,
-      debtLoad:
-        income && expense
-          ? scoreDebtLoad(
-              assets?.liabilityTypes ? assets.liabilityTypes.length > 0 : false,
-              expense.savingsRatioPct,
-            )
-          : 0,
+      debtLoad: expense
+        ? scoreDebtLoad(
+            (finance?.liabilityTypes?.length ?? 0) > 0,
+            expense.savingsRatioPct,
+          )
+        : 0,
       emergencyFund:
         assets && expense ? scoreEmergencyFund(cashAmount, monthlyExpenses) : 0,
-      insurance: assets ? scoreInsurance(assets.insuranceCoverageTypes) : 0,
-      goals: goals.length ? scoreGoals(goals) : 0,
+      insurance: finance ? scoreInsurance(finance.insuranceCoverageTypes) : 0,
+      goals: WEIGHT_GOALS,
     };
 
     const healthScore = Object.values(scoreBreakdown).reduce(
@@ -163,20 +146,13 @@ export class DashboardService {
           : null,
       netWorth: assets
         ? {
-            value: assets.netWorth,
             totalAssets: assets.totalAssets,
-            totalLiabilities: assets.totalLiabilities,
           }
         : null,
       completion: getCompletionStatus(data.profileStage),
       riskProfile: data.riskProfile
         ? { category: data.riskProfile.riskCategory }
         : null,
-      goalsSummary: {
-        total: goals.length,
-        achieved: goals.filter((g) => g.isAchieved).length,
-        topGoal: goals[0] ?? null,
-      },
       monthlyIncome,
     };
   }
@@ -230,55 +206,30 @@ export class DashboardService {
     };
   }
 
-  // ── Assets vs liabilities chart ────────────────────────────
+  // ── Assets chart ───────────────────────────────────────────
 
   async getAssetsChart(userId: string) {
     const data = await this.repo.getAssetsData(userId);
     if (!data) throw new NotFoundError("User not found");
 
     const a = data.assetLiabilityProfile;
+    const finance = data.financeProfile;
+
     if (!a) {
       return {
         available: false,
-        message: "Complete the assets & liabilities step to see this chart.",
+        message: "Complete the assets step to see this chart.",
       };
     }
-
-    const debtToAssetRatio =
-      a.totalAssets > 0
-        ? Math.round((a.totalLiabilities / a.totalAssets) * 100) / 100
-        : null;
 
     return {
       available: true,
       summary: {
         totalAssets: a.totalAssets,
-        totalLiabilities: a.totalLiabilities,
-        netWorth: a.netWorth,
-        debtToAssetRatio,
-        debtToAssetLabel:
-          debtToAssetRatio === null
-            ? null
-            : debtToAssetRatio <= 0.3
-              ? "Healthy"
-              : debtToAssetRatio <= 0.5
-                ? "Moderate"
-                : "High",
       },
-      comparison: [
-        { label: "Total Assets", amount: a.totalAssets },
-        { label: "Total Liabilities", amount: a.totalLiabilities },
-        { label: "Net Worth", amount: a.netWorth },
-      ],
-      assetComposition: a.assets
-        .filter((asset) => asset.amount > 0)
-        .map((asset) => ({
-          label: ASSET_TYPE_LABELS[asset.assetType],
-          amount: asset.amount,
-          color: ASSET_COLORS[asset.assetType],
-        })),
-      liabilityTypes: a.liabilityTypes,
-      insuranceCoverageTypes: a.insuranceCoverageTypes,
+      assetComposition: assetComposition(a),
+      liabilityTypes: finance?.liabilityTypes ?? [],
+      insuranceCoverageTypes: finance?.insuranceCoverageTypes ?? [],
     };
   }
 
@@ -289,30 +240,25 @@ export class DashboardService {
     if (!data) throw new NotFoundError("User not found");
 
     const income = data.incomeProfile;
-    const assets = data.assetLiabilityProfile;
+    const finance = data.financeProfile;
 
-    if (!income || !assets) {
+    if (!income || !finance) {
       return {
         available: false,
         message:
-          "Complete income and assets steps to see your insurance coverage.",
+          "Complete income and finance steps to see your insurance coverage.",
       };
     }
 
     const annualIncome = income.totalMonthly * 12;
-    const members = data.profile?.numberOfMembers ?? 1;
-    const dependents =
-      data.profile?.numberOfDependents ?? Math.max(members - 1, 0);
+    const dependents = finance.numberOfDependents ?? 0;
 
-    const hasLife = assets.insuranceCoverageTypes.includes("life_insurance");
-    const hasHealth =
-      assets.insuranceCoverageTypes.includes("health_insurance");
-    const hasProperty =
-      assets.insuranceCoverageTypes.includes("property_insurance");
+    const coverageTypes = finance.insuranceCoverageTypes;
+    const hasLife = coverageTypes.includes("life_insurance");
+    const hasHealth = coverageTypes.includes("health_insurance");
+    const hasProperty = coverageTypes.includes("property_insurance");
 
-    // Recommended life cover = 10× annual income
     const recommendedLifeCover = annualIncome * 10;
-    // Recommended health cover: ₹5L base + ₹2L per dependent
     const recommendedHealthCover = 500000 + dependents * 200000;
 
     return {
@@ -346,60 +292,6 @@ export class DashboardService {
           status: hasProperty ? "Covered" : "Not covered",
         },
       },
-    };
-  }
-
-  // ── Goals tracker ──────────────────────────────────────────
-
-  async getGoalsTracker(userId: string) {
-    const data = await this.repo.getGoalsData(userId);
-    if (!data) throw new NotFoundError("User not found");
-
-    if (!data.financialGoals.length) {
-      return { available: false, message: "No financial goals added yet." };
-    }
-
-    const surplus = data.expenseProfile?.monthlySurplus ?? 0;
-    const availableForGoals = Math.max(surplus, 0);
-
-    const goals = data.financialGoals.map((g) => {
-      const remaining = Math.max(g.targetAmount - g.currentSaved, 0);
-      const progressPct =
-        g.targetAmount > 0
-          ? Math.min(Math.round((g.currentSaved / g.targetAmount) * 100), 100)
-          : 0;
-      const monthsLeft = g.targetYears * 12;
-      const monthlySavingsNeeded =
-        monthsLeft > 0 ? Math.round(remaining / monthsLeft) : 0;
-      const onTrack =
-        monthlySavingsNeeded <=
-        availableForGoals / Math.max(data.financialGoals.length, 1);
-
-      return {
-        id: g.id,
-        type: g.type,
-        priority: g.priority,
-        targetAmount: g.targetAmount,
-        currentSaved: g.currentSaved,
-        remaining,
-        targetYears: g.targetYears,
-        progressPercentage: progressPct,
-        monthlySavingsNeeded,
-        isAchieved: g.isAchieved,
-        status: g.isAchieved
-          ? "Achieved"
-          : onTrack
-            ? "On Track"
-            : "Needs Attention",
-      };
-    });
-
-    return {
-      available: true,
-      availableMonthlySurplus: availableForGoals,
-      totalGoals: goals.length,
-      achieved: goals.filter((g) => g.isAchieved).length,
-      goals,
     };
   }
 

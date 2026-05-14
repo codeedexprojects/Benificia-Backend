@@ -75,13 +75,12 @@ enum IncomeSource {
 // ── Assets ────────────────────────────────────────────────────
 
 enum AssetType {
-  cash_savings
-  fixed_deposit
-  mutual_funds_stocks
-  gold
-  real_estate
-  epf_ppf
-  other
+  residential_property
+  investment
+  savings_bank
+  gold_jewelry
+  retirement_funds
+  other_assets
 }
 
 // ── Liabilities ───────────────────────────────────────────────

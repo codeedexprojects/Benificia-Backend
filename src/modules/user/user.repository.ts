@@ -217,7 +217,7 @@ export class UserRepository {
           select: {
             fullName: true,
             gender: true,
-            yob: true,
+            age: true,
             photoS3Key: true,
             addressLine1: true,
             landmark: true,
@@ -228,9 +228,21 @@ export class UserRepository {
             pincode: true,
             country: true,
             maritalStatus: true,
-            numberOfMembers: true,
-            numberOfDependents: true,
           },
+        },
+      },
+    });
+  }
+
+  getAppStateData(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        profileStage: true,
+        aiRecommendations: {
+          orderBy: { generatedAt: "desc" },
+          take: 1,
+          select: { id: true },
         },
       },
     });
@@ -239,18 +251,16 @@ export class UserRepository {
   updatePersonalDetails(
     userId: string,
     data: {
-      gender: "male" | "female" | "other" | "prefer_not_to_say";
-      yob: number;
-      maritalStatus: "single" | "married" | "divorced" | "widowed";
-      numberOfMembers: number;
+      gender?: "male" | "female" | "other" | "prefer_not_to_say";
+      age: number;
+      maritalStatus?: "single" | "married" | "divorced" | "widowed";
     },
   ) {
-    const numberOfDependents = Math.max(0, data.numberOfMembers - 1);
     return this.prisma.$transaction([
       this.prisma.userProfile.upsert({
         where: { userId },
-        create: { userId, ...data, numberOfDependents },
-        update: { ...data, numberOfDependents },
+        create: { userId, ...data },
+        update: { ...data },
         select: { userId: true },
       }),
       this.prisma.user.update({

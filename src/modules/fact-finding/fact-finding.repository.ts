@@ -19,7 +19,7 @@ type ExpensesData = z.infer<typeof expensesSchema> & {
   savingsRatioPct: number;
 };
 type AssetsInput = z.infer<typeof assetsSchema>;
-type AssetsComputed = { totalAssets: number; netWorth: number };
+type AssetsComputed = { totalAssets: number };
 type RiskData = z.infer<typeof riskSchema> & {
   riskCategory: "conservative" | "moderate" | "aggressive";
 };
@@ -40,8 +40,6 @@ export class FactFindingRepository {
       select: { totalMonthly: true },
     });
   }
-
-  // ── Screen: Finance 1 — Income Sources ───────────────────────
 
   async upsertIncomeSources(
     userId: string,
@@ -65,8 +63,6 @@ export class FactFindingRepository {
     ]);
   }
 
-  // ── Screen: Finance 2 — Dependents, Liabilities, Insurance ───
-
   async upsertFinanceProfile(
     userId: string,
     data: FinanceProfileData,
@@ -87,12 +83,6 @@ export class FactFindingRepository {
           insuranceCoverageTypes: data.insuranceCoverageTypes,
         },
       }),
-      // Also sync numberOfDependents to UserProfile
-      this.db.userProfile.upsert({
-        where: { userId },
-        create: { userId, numberOfDependents: data.numberOfDependents },
-        update: { numberOfDependents: data.numberOfDependents },
-      }),
       ...(shouldAdvance
         ? [
             this.db.user.update({
@@ -104,8 +94,6 @@ export class FactFindingRepository {
     ]);
   }
 
-  // ── Screen: Finance 3 — Income Amount ────────────────────────
-
   async upsertIncomeAmount(
     userId: string,
     data: IncomeAmountData,
@@ -115,7 +103,6 @@ export class FactFindingRepository {
       salaryMonthly,
       freelanceMonthly,
       businessMonthly,
-      passiveMonthly,
       otherMonthly,
       totalMonthly,
     } = data;
@@ -127,7 +114,6 @@ export class FactFindingRepository {
           salaryMonthly,
           freelanceMonthly,
           businessMonthly,
-          passiveMonthly,
           otherMonthly,
           totalMonthly,
         },
@@ -135,7 +121,6 @@ export class FactFindingRepository {
           salaryMonthly,
           freelanceMonthly,
           businessMonthly,
-          passiveMonthly,
           otherMonthly,
           totalMonthly,
         },
@@ -150,8 +135,6 @@ export class FactFindingRepository {
         : []),
     ]);
   }
-
-  // ── Screen: Finance 4 — Expenses ─────────────────────────────
 
   async upsertExpenses(
     userId: string,
@@ -176,42 +159,43 @@ export class FactFindingRepository {
     ]);
   }
 
-  // ── Screen: Finance 5 — Assets ───────────────────────────────
-
   async upsertAssets(
     userId: string,
     input: AssetsInput,
     computed: AssetsComputed,
     shouldAdvance: boolean,
   ): Promise<void> {
-    const existing = await this.db.assetLiabilityProfile.upsert({
-      where: { userId },
-      create: {
-        userId,
-        totalAssets: computed.totalAssets,
-        netWorth: computed.netWorth,
-      },
-      update: {
-        totalAssets: computed.totalAssets,
-        netWorth: computed.netWorth,
-      },
-    });
-
+    const {
+      residentialProperty,
+      investment,
+      savingsBank,
+      goldJewelry,
+      retirementFunds,
+      otherAssets,
+    } = input;
     await this.db.$transaction([
-      this.db.userAsset.deleteMany({
-        where: { assetLiabilityProfileId: existing.id },
+      this.db.assetLiabilityProfile.upsert({
+        where: { userId },
+        create: {
+          userId,
+          residentialProperty,
+          investment,
+          savingsBank,
+          goldJewelry,
+          retirementFunds,
+          otherAssets,
+          totalAssets: computed.totalAssets,
+        },
+        update: {
+          residentialProperty,
+          investment,
+          savingsBank,
+          goldJewelry,
+          retirementFunds,
+          otherAssets,
+          totalAssets: computed.totalAssets,
+        },
       }),
-      ...(input.assets.length > 0
-        ? [
-            this.db.userAsset.createMany({
-              data: input.assets.map((a) => ({
-                assetLiabilityProfileId: existing.id,
-                assetType: a.assetType,
-                amount: a.amount,
-              })),
-            }),
-          ]
-        : []),
       ...(shouldAdvance
         ? [
             this.db.user.update({
@@ -222,8 +206,6 @@ export class FactFindingRepository {
         : []),
     ]);
   }
-
-  // ── Risk ──────────────────────────────────────────────────────
 
   async upsertRisk(userId: string, data: RiskData): Promise<void> {
     const {
@@ -262,8 +244,6 @@ export class FactFindingRepository {
     ]);
   }
 
-  // ── GET /status — all saved fact-finding data ─────────────────
-
   async findAllFactFindingData(userId: string) {
     const [
       user,
@@ -296,7 +276,6 @@ export class FactFindingRepository {
           salaryMonthly: true,
           freelanceMonthly: true,
           businessMonthly: true,
-          passiveMonthly: true,
           otherMonthly: true,
           totalMonthly: true,
         },
@@ -312,9 +291,13 @@ export class FactFindingRepository {
       this.db.assetLiabilityProfile.findUnique({
         where: { userId },
         select: {
+          residentialProperty: true,
+          investment: true,
+          savingsBank: true,
+          goldJewelry: true,
+          retirementFunds: true,
+          otherAssets: true,
           totalAssets: true,
-          netWorth: true,
-          assets: { select: { assetType: true, amount: true } },
         },
       }),
       this.db.riskProfile.findUnique({
@@ -336,13 +319,7 @@ export class FactFindingRepository {
       financeProfile: financeProfile ?? null,
       incomeAmount: incomeAmount ?? null,
       expenses: expenses ?? null,
-      assets: assetProfile
-        ? {
-            assets: assetProfile.assets,
-            totalAssets: assetProfile.totalAssets,
-            netWorth: assetProfile.netWorth,
-          }
-        : null,
+      assets: assetProfile ?? null,
       risk: risk ?? null,
     };
   }

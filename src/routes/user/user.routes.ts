@@ -7,6 +7,9 @@ export function userRoutes(controller: UserController): Router {
 
   router.use(requireUser);
 
+  // App routing state — call on every app open after login
+  router.get("/app-state", controller.getAppState);
+
   // Profile
   router.get("/me", controller.getProfile);
   router.patch("/personal", controller.updatePersonalDetails);

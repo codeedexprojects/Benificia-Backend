@@ -8,23 +8,21 @@ import type {
   assetsSchema,
   riskSchema,
 } from "./fact-finding.schema";
-import { ForbiddenError } from "../../utils/errors";
+import { ForbiddenError, BadRequestError } from "../../utils/errors";
 import { getCompletionStatus } from "../../utils/profile-completion";
 import type { ProfileStage } from "@prisma/client";
+import type { RecommendationService } from "../recommendation/recommendation.service";
 
-// Casts a stage string that exists in the new schema but not yet in the
-// generated Prisma client (run `prisma generate` after migrating to remove this).
 const asStage = (s: string) => s as ProfileStage;
 
 type ProfileStageStr = string;
 
-// Ordered list of stages for gate checks
 const STAGE_ORDER: Record<string, number> = {
   personal_complete: 0,
   fact_finding_income_sources: 1,
   fact_finding_dependents: 2,
-  fact_finding_liabilities: 3, // kept for backwards-compat reads; same screen as dependents
-  fact_finding_insurance: 4, // kept for backwards-compat reads; same screen as dependents
+  fact_finding_liabilities: 3,
+  fact_finding_insurance: 4,
   fact_finding_income_amount: 5,
   fact_finding_expenses: 6,
   fact_finding_assets: 7,
@@ -32,7 +30,19 @@ const STAGE_ORDER: Record<string, number> = {
   recommendations_ready: 9,
 };
 
-// Returns true only when the user is exactly at the required stage (first-time save)
+const COMPLETE_STAGES = new Set([
+  "fact_finding_complete",
+  "recommendations_ready",
+]);
+
+function assertNotComplete(stage: ProfileStageStr): void {
+  if (COMPLETE_STAGES.has(stage)) {
+    throw new BadRequestError(
+      "Fact-finding is already complete. Head to your dashboard.",
+    );
+  }
+}
+
 function shouldAdvanceStage(
   current: ProfileStageStr,
   requiredBefore: ProfileStageStr,
@@ -40,7 +50,6 @@ function shouldAdvanceStage(
   return current === requiredBefore;
 }
 
-// Blocks access if user hasn't reached the minimum required stage yet
 function assertAtLeast(
   current: ProfileStageStr,
   minimumStage: ProfileStageStr,
@@ -51,14 +60,11 @@ function assertAtLeast(
   }
 }
 
-// ── Computed field helpers ────────────────────────────────────
-
 function computeIncomeAmount(raw: z.infer<typeof incomeAmountSchema>) {
   const totalMonthly =
     raw.salaryMonthly +
     raw.freelanceMonthly +
     raw.businessMonthly +
-    raw.passiveMonthly +
     raw.otherMonthly;
   return { ...raw, totalMonthly };
 }
@@ -76,8 +82,14 @@ function computeExpenses(
 }
 
 function computeAssets(raw: z.infer<typeof assetsSchema>) {
-  const totalAssets = raw.assets.reduce((sum, a) => sum + a.amount, 0);
-  return { totalAssets, netWorth: totalAssets };
+  const totalAssets =
+    raw.residentialProperty +
+    raw.investment +
+    raw.savingsBank +
+    raw.goldJewelry +
+    raw.retirementFunds +
+    raw.otherAssets;
+  return { totalAssets };
 }
 
 function deriveRiskCategory(
@@ -101,12 +113,12 @@ function deriveRiskCategory(
   return "conservative";
 }
 
-// ── Service ───────────────────────────────────────────────────
-
 export class FactFindingService {
-  constructor(private readonly repo: FactFindingRepository) {}
+  constructor(
+    private readonly repo: FactFindingRepository,
+    private readonly recommendationService: RecommendationService,
+  ) {}
 
-  // Screen: Finance 1 — Income Sources
   async saveIncomeSources(
     userId: string,
     input: z.infer<typeof incomeSourcesSchema>,
@@ -114,6 +126,7 @@ export class FactFindingService {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
+    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "personal_complete",
@@ -132,7 +145,6 @@ export class FactFindingService {
     };
   }
 
-  // Screen: Finance 2 — Dependents, Liabilities, Insurance
   async saveFinanceProfile(
     userId: string,
     input: z.infer<typeof financeProfileSchema>,
@@ -140,6 +152,7 @@ export class FactFindingService {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
+    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_income_sources",
@@ -158,7 +171,6 @@ export class FactFindingService {
     };
   }
 
-  // Screen: Finance 3 — Income Amount
   async saveIncomeAmount(
     userId: string,
     input: z.infer<typeof incomeAmountSchema>,
@@ -166,6 +178,7 @@ export class FactFindingService {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
+    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_dependents",
@@ -186,11 +199,11 @@ export class FactFindingService {
     };
   }
 
-  // Screen: Finance 4 — Monthly Expenses
   async saveExpenses(userId: string, input: z.infer<typeof expensesSchema>) {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
+    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_income_amount",
@@ -214,11 +227,11 @@ export class FactFindingService {
     };
   }
 
-  // Screen: Finance 5 — Assets (skippable)
   async saveAssets(userId: string, input: z.infer<typeof assetsSchema>) {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
+    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_expenses",
@@ -235,16 +248,15 @@ export class FactFindingService {
     return {
       message: "Assets saved",
       totalAssets: computed.totalAssets,
-      netWorth: computed.netWorth,
       completion: getCompletionStatus(nextStage),
     };
   }
 
-  // Screen: Risk — all 5 questions together
   async saveRisk(userId: string, input: z.infer<typeof riskSchema>) {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
+    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_assets",
@@ -259,14 +271,20 @@ export class FactFindingService {
 
     await this.repo.upsertRisk(userId, { ...input, riskCategory });
 
+    const recommendation = await this.recommendationService.generate(userId);
+
     return {
       message: "Risk profile saved",
       riskCategory,
       completion: getCompletionStatus("fact_finding_complete"),
+      destination: "dashboard",
+      recommendation: {
+        id: recommendation.id,
+        recommendations: recommendation.recommendations,
+      },
     };
   }
 
-  // GET /status — returns current stage + all saved data for pre-fill
   async getStatus(userId: string) {
     const data = await this.repo.findAllFactFindingData(userId);
     return {

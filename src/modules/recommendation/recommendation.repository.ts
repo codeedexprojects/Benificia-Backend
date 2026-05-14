@@ -14,22 +14,18 @@ export class RecommendationRepository {
           select: {
             fullName: true,
             gender: true,
-            yob: true,
+            age: true,
             city: true,
             state: true,
             pincode: true,
             maritalStatus: true,
-            numberOfMembers: true,
-            numberOfDependents: true,
           },
         },
         incomeProfile: {
           select: {
-            incomeSources: true,
             salaryMonthly: true,
             freelanceMonthly: true,
             businessMonthly: true,
-            passiveMonthly: true,
             otherMonthly: true,
             totalMonthly: true,
           },
@@ -41,25 +37,26 @@ export class RecommendationRepository {
             savingsRatioPct: true,
           },
         },
-        assetLiabilityProfile: {
+        financeProfile: {
           select: {
-            totalAssets: true,
-            totalLiabilities: true,
-            netWorth: true,
+            numberOfDependents: true,
             liabilityTypes: true,
             insuranceCoverageTypes: true,
-            assets: { select: { assetType: true, amount: true } },
           },
         },
-        financialGoals: {
+        incomeSourcesProfile: {
+          select: { incomeSources: true },
+        },
+        assetLiabilityProfile: {
           select: {
-            type: true,
-            targetAmount: true,
-            currentSaved: true,
-            targetYears: true,
-            priority: true,
+            residentialProperty: true,
+            investment: true,
+            savingsBank: true,
+            goldJewelry: true,
+            retirementFunds: true,
+            otherAssets: true,
+            totalAssets: true,
           },
-          orderBy: { priority: "asc" },
         },
         riskProfile: {
           select: {

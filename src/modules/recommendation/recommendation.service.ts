@@ -29,10 +29,8 @@ export class RecommendationService {
     const income = ctx.incomeProfile;
     const expense = ctx.expenseProfile;
     const assets = ctx.assetLiabilityProfile;
-
-    const assetMap = Object.fromEntries(
-      (assets?.assets ?? []).map((a) => [a.assetType, a.amount]),
-    );
+    const finance = ctx.financeProfile;
+    const incomeSrc = ctx.incomeSourcesProfile;
 
     // Build user_context payload for the AI server
     const userContext: Record<string, unknown> = {
@@ -40,17 +38,14 @@ export class RecommendationService {
       // Demographics
       gender: profile?.gender ?? null,
       marital_status: profile?.maritalStatus ?? null,
-      year_of_birth: profile?.yob ?? null,
-      number_of_members: profile?.numberOfMembers ?? 1,
-      number_of_dependents: profile?.numberOfDependents ?? 0,
+      age: profile?.age ?? null,
       city: profile?.city ?? null,
       state: profile?.state ?? null,
       // Income
-      income_sources: income?.incomeSources ?? [],
+      income_sources: incomeSrc?.incomeSources ?? [],
       salary_monthly: income?.salaryMonthly ?? 0,
       freelance_monthly: income?.freelanceMonthly ?? 0,
       business_monthly: income?.businessMonthly ?? 0,
-      passive_monthly: income?.passiveMonthly ?? 0,
       other_monthly: income?.otherMonthly ?? 0,
       monthly_income: income?.totalMonthly ?? 0,
       annual_income: (income?.totalMonthly ?? 0) * 12,
@@ -60,24 +55,14 @@ export class RecommendationService {
       savings_ratio_pct: expense?.savingsRatioPct ?? 0,
       // Assets & liabilities
       total_assets: assets?.totalAssets ?? 0,
-      total_liabilities: assets?.totalLiabilities ?? 0,
-      net_worth: assets?.netWorth ?? 0,
-      liability_types: assets?.liabilityTypes ?? [],
-      insurance_coverage_types: assets?.insuranceCoverageTypes ?? [],
-      cash_savings: assetMap["cash_savings"] ?? 0,
-      fixed_deposits: assetMap["fixed_deposit"] ?? 0,
-      mutual_funds_stocks: assetMap["mutual_funds_stocks"] ?? 0,
-      gold_value: assetMap["gold"] ?? 0,
-      real_estate_value: assetMap["real_estate"] ?? 0,
-      epf_ppf_balance: assetMap["epf_ppf"] ?? 0,
-      // Goals
-      financial_goals: ctx.financialGoals.map((g) => ({
-        type: g.type,
-        target_amount: g.targetAmount,
-        current_saved: g.currentSaved,
-        target_years: g.targetYears,
-        priority: g.priority,
-      })),
+      liability_types: finance?.liabilityTypes ?? [],
+      insurance_coverage_types: finance?.insuranceCoverageTypes ?? [],
+      residential_property: assets?.residentialProperty ?? 0,
+      investment: assets?.investment ?? 0,
+      savings_bank: assets?.savingsBank ?? 0,
+      gold_jewelry: assets?.goldJewelry ?? 0,
+      retirement_funds: assets?.retirementFunds ?? 0,
+      other_assets: assets?.otherAssets ?? 0,
       // Risk
       risk_category: ctx.riskProfile?.riskCategory ?? null,
       portfolio_drop: ctx.riskProfile?.portfolioDrop ?? null,
@@ -94,7 +79,6 @@ export class RecommendationService {
       request_id: requestId,
       vertical: "health",
       user_context: userContext,
-      llm_provider: null as unknown as string,
       top_n: TOP_N,
     });
 

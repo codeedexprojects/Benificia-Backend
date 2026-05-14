@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// ── Screen: Finance 1 — Income Sources ───────────────────────
-// "How do you generate income?" — multi-select
-
 export const incomeSourcesSchema = z.object({
   incomeSources: z
     .array(
@@ -19,11 +16,6 @@ export const incomeSourcesSchema = z.object({
     )
     .min(1, "Please select at least one income source"),
 });
-
-// ── Screen: Finance 2 — Dependents, Liabilities, Insurance ───
-// "How many people depend on your income?"
-// "Do you have any liabilities?"
-// "What is your insurance coverage?"
 
 export const financeProfileSchema = z.object({
   numberOfDependents: z
@@ -49,10 +41,6 @@ export const financeProfileSchema = z.object({
     .default([]),
 });
 
-// ── Screen: Finance 3 — Income Amount ────────────────────────
-// "What is your total monthly income?" — per-source amounts
-// Frontend sends monthly values (divides yearly by 12 before sending)
-
 const amount = (label: string) =>
   z
     .number({ error: `${label} must be a number` })
@@ -61,10 +49,9 @@ const amount = (label: string) =>
 
 export const incomeAmountSchema = z
   .object({
-    salaryMonthly: amount("Salary"),
-    freelanceMonthly: amount("Freelance income"),
+    salaryMonthly: amount("Full time salary"),
+    freelanceMonthly: amount("Freelance/contract income"),
     businessMonthly: amount("Business income"),
-    passiveMonthly: amount("Passive income"),
     otherMonthly: amount("Other income"),
   })
   .refine(
@@ -72,15 +59,10 @@ export const incomeAmountSchema = z
       d.salaryMonthly +
         d.freelanceMonthly +
         d.businessMonthly +
-        d.passiveMonthly +
         d.otherMonthly >
       0,
     { message: "Please enter at least one income amount" },
   );
-
-// ── Screen: Finance 4 — Monthly Expenses ─────────────────────
-// "How much do you spend monthly?"
-// Frontend sends monthly value (divides yearly by 12 before sending)
 
 export const expensesSchema = z.object({
   totalMonthly: z
@@ -88,48 +70,24 @@ export const expensesSchema = z.object({
     .min(0, "Monthly spending cannot be negative"),
 });
 
-// ── Screen: Finance 5 — Assets ───────────────────────────────
-// "What are your total assets?" — type + amount list
-// Skippable: assets array can be empty
-
 export const assetsSchema = z.object({
-  assets: z
-    .array(
-      z.object({
-        assetType: z.enum(
-          [
-            "cash_savings",
-            "fixed_deposit",
-            "mutual_funds_stocks",
-            "gold",
-            "real_estate",
-            "epf_ppf",
-            "other",
-          ],
-          { error: "Invalid asset type" },
-        ),
-        amount: z
-          .number({ error: "Amount must be a number" })
-          .min(0, "Amount cannot be negative"),
-      }),
-    )
-    .default([]),
+  residentialProperty: amount("Residential property"),
+  investment: amount("Investment"),
+  savingsBank: amount("Savings and bank account"),
+  goldJewelry: amount("Gold and jewelry"),
+  retirementFunds: amount("Retirement funds"),
+  otherAssets: amount("Other assets"),
 });
 
-// ── Screen: Risk — all 5 questions submitted together ────────
-
 export const riskSchema = z.object({
-  // Q1: If your portfolio dropped 20% you would…
   portfolioDrop: z.enum(["sell_everything", "wait_it_out", "buy_more"], {
     error: "Please select what you would do if your portfolio dropped",
   }),
 
-  // Q2: Which investment style suits you best?
   investmentStyle: z.enum(["conservative", "moderate", "aggressive"], {
     error: "Please select your investment style",
   }),
 
-  // Q3: What are you aiming for? (multi-select)
   financialAims: z
     .array(
       z.enum(
@@ -145,12 +103,10 @@ export const riskSchema = z.object({
     )
     .min(1, "Please select at least one financial aim"),
 
-  // Q4: When do you hope to achieve this?
   timeHorizon: z.enum(["short_1_3", "medium_3_7", "long_7_plus"], {
     error: "Please select your time horizon",
   }),
 
-  // Q5: How do you feel about market fluctuations?
   marketFeeling: z.enum(["very_anxious", "neutral", "excited"], {
     error: "Please select how you feel about market fluctuations",
   }),
