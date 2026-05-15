@@ -42,14 +42,10 @@ import type { personalDetailsSchema } from "./user.schema";
 type RedisClient = ReturnType<typeof createClient>;
 
 const STAGE_TO_STEP: Record<string, string> = {
-  personal_complete: "income_sources",
+  personal_complete: "income",
   fact_finding_income_sources: "finance_profile",
-  fact_finding_dependents: "income_amount",
-  fact_finding_liabilities: "income_amount",
-  fact_finding_insurance: "income_amount",
-  fact_finding_income_amount: "expenses",
-  fact_finding_expenses: "assets",
-  fact_finding_assets: "risk",
+  fact_finding_liabilities: "goals",
+  fact_finding_goals: "risk",
 };
 
 interface SessionCache {
