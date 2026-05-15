@@ -12,15 +12,29 @@ export class DashboardRepository {
         incomeProfile: {
           select: { totalMonthly: true },
         },
-        expenseProfile: {
+        financeProfile: {
           select: {
-            totalMonthly: true,
+            numberOfDependents: true,
+            householdExpenses: true,
+            rentAndEmi: true,
+            educationExpenses: true,
+            otherExpenses: true,
+            insuranceMonthly: true,
+            creditCardDues: true,
+            personalLoan: true,
+            medicalExpenses: true,
+            otherShortTermExpenses: true,
+            homeLoan: true,
+            vehicleLoan: true,
+            educationLoan: true,
+            businessLoan: true,
+            otherLongTermExpenses: true,
+            totalMonthlyExpenses: true,
+            totalShortTermLiabilities: true,
+            totalLongTermLiabilities: true,
             monthlySurplus: true,
             savingsRatioPct: true,
           },
-        },
-        financeProfile: {
-          select: { liabilityTypes: true, insuranceCoverageTypes: true },
         },
         assetLiabilityProfile: {
           select: {
@@ -45,9 +59,9 @@ export class DashboardRepository {
       where: { id: userId },
       select: {
         incomeProfile: { select: { totalMonthly: true } },
-        expenseProfile: {
+        financeProfile: {
           select: {
-            totalMonthly: true,
+            totalMonthlyExpenses: true,
             monthlySurplus: true,
             savingsRatioPct: true,
           },
@@ -61,7 +75,10 @@ export class DashboardRepository {
       where: { id: userId },
       select: {
         financeProfile: {
-          select: { liabilityTypes: true, insuranceCoverageTypes: true },
+          select: {
+            totalShortTermLiabilities: true,
+            totalLongTermLiabilities: true,
+          },
         },
         assetLiabilityProfile: {
           select: {
@@ -84,7 +101,10 @@ export class DashboardRepository {
       select: {
         incomeProfile: { select: { totalMonthly: true } },
         financeProfile: {
-          select: { insuranceCoverageTypes: true, numberOfDependents: true },
+          select: {
+            numberOfDependents: true,
+            insuranceMonthly: true,
+          },
         },
       },
     });
@@ -99,9 +119,13 @@ export class DashboardRepository {
             riskCategory: true,
             portfolioDrop: true,
             investmentStyle: true,
+            marketFeeling: true,
+          },
+        },
+        goalsProfile: {
+          select: {
             financialAims: true,
             timeHorizon: true,
-            marketFeeling: true,
           },
         },
       },

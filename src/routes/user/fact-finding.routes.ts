@@ -11,14 +11,13 @@ export function factFindingRoutes(controller: FactFindingController): Router {
   router.get("/status", controller.getStatus);
 
   // Finance section (in order)
-  router.post("/income-sources", controller.saveIncomeSources); // Finance 1
-  router.post("/finance-profile", controller.saveFinanceProfile); // Finance 2: dependents + liabilities + insurance
-  router.post("/income-amount", controller.saveIncomeAmount); // Finance 3
-  router.post("/expenses", controller.saveExpenses); // Finance 4
-  router.post("/assets", controller.saveAssets); // Finance 5 (skippable)
+  router.post("/income", controller.saveIncome); // Finance 1: income sources + amounts
+  router.post("/finance-profile", controller.saveFinanceProfile); // Finance 2: dependents + spend + insurance + liabilities
+  router.post("/goals", controller.saveGoals); // Finance 3: financial aims + time horizon
 
-  // Risk section (all 5 questions submitted together)
+  // Page 5: risk assessment (optional — can skip)
   router.post("/risk", controller.saveRisk);
+  router.post("/risk/skip", controller.skipRisk);
 
   return router;
 }

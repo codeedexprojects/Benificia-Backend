@@ -19,8 +19,8 @@ model User {
   incomeSourcesProfile   IncomeSourcesProfile?
   financeProfile         FinanceProfile?
   incomeProfile          IncomeProfile?
-  expenseProfile         ExpenseProfile?
   assetLiabilityProfile  AssetLiabilityProfile?
+  goalsProfile           GoalsProfile?
   riskProfile            RiskProfile?
   authSessions           AuthSession[]
   otpLogs                OtpLog[]

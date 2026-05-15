@@ -1,14 +1,12 @@
 import type { FactFindingRepository } from "./fact-finding.repository";
 import type { z } from "zod";
 import type {
-  incomeSourcesSchema,
+  incomeSchema,
   financeProfileSchema,
-  incomeAmountSchema,
-  expensesSchema,
-  assetsSchema,
+  goalsSchema,
   riskSchema,
 } from "./fact-finding.schema";
-import { ForbiddenError, BadRequestError } from "../../utils/errors";
+import { ForbiddenError } from "../../utils/errors";
 import { getCompletionStatus } from "../../utils/profile-completion";
 import type { ProfileStage } from "@prisma/client";
 import type { RecommendationService } from "../recommendation/recommendation.service";
@@ -21,27 +19,10 @@ const STAGE_ORDER: Record<string, number> = {
   personal_complete: 0,
   fact_finding_income_sources: 1,
   fact_finding_dependents: 2,
-  fact_finding_liabilities: 3,
-  fact_finding_insurance: 4,
-  fact_finding_income_amount: 5,
-  fact_finding_expenses: 6,
-  fact_finding_assets: 7,
-  fact_finding_complete: 8,
-  recommendations_ready: 9,
+  fact_finding_assets: 3,
+  fact_finding_complete: 4,
+  recommendations_ready: 5,
 };
-
-const COMPLETE_STAGES = new Set([
-  "fact_finding_complete",
-  "recommendations_ready",
-]);
-
-function assertNotComplete(stage: ProfileStageStr): void {
-  if (COMPLETE_STAGES.has(stage)) {
-    throw new BadRequestError(
-      "Fact-finding is already complete. Head to your dashboard.",
-    );
-  }
-}
 
 function shouldAdvanceStage(
   current: ProfileStageStr,
@@ -60,28 +41,12 @@ function assertAtLeast(
   }
 }
 
-function computeIncomeAmount(raw: z.infer<typeof incomeAmountSchema>) {
+function computeIncome(raw: z.infer<typeof incomeSchema>) {
   const totalMonthly =
     raw.salaryMonthly +
     raw.freelanceMonthly +
     raw.businessMonthly +
     raw.otherMonthly;
-  return { ...raw, totalMonthly };
-}
-
-function computeExpenses(
-  raw: z.infer<typeof expensesSchema>,
-  incomeMonthly: number,
-) {
-  const monthlySurplus = incomeMonthly - raw.totalMonthly;
-  const savingsRatioPct =
-    incomeMonthly > 0
-      ? parseFloat(((monthlySurplus / incomeMonthly) * 100).toFixed(2))
-      : 0;
-  return { ...raw, monthlySurplus, savingsRatioPct };
-}
-
-function computeAssets(raw: z.infer<typeof assetsSchema>) {
   const totalAssets =
     raw.residentialProperty +
     raw.investment +
@@ -89,7 +54,75 @@ function computeAssets(raw: z.infer<typeof assetsSchema>) {
     raw.goldJewelry +
     raw.retirementFunds +
     raw.otherAssets;
-  return { totalAssets };
+  return { ...raw, totalMonthly, totalAssets };
+}
+
+function computeFinanceProfile(
+  raw: z.infer<typeof financeProfileSchema>,
+  incomeMonthly: number,
+) {
+  const n = raw.frequency === "yearly" ? 12 : 1;
+
+  const householdExpenses = raw.householdExpenses / n;
+  const rentAndEmi = raw.rentAndEmi / n;
+  const educationExpenses = raw.educationExpenses / n;
+  const otherExpenses = raw.otherExpenses / n;
+  const insuranceMonthly = raw.insuranceMonthly / n;
+  const creditCardDues = raw.creditCardDues / n;
+  const personalLoan = raw.personalLoan / n;
+  const medicalExpenses = raw.medicalExpenses / n;
+  const otherShortTermExpenses = raw.otherShortTermExpenses / n;
+  const homeLoan = raw.homeLoan / n;
+  const vehicleLoan = raw.vehicleLoan / n;
+  const educationLoan = raw.educationLoan / n;
+  const businessLoan = raw.businessLoan / n;
+  const otherLongTermExpenses = raw.otherLongTermExpenses / n;
+
+  const totalMonthlyExpenses =
+    householdExpenses +
+    rentAndEmi +
+    educationExpenses +
+    otherExpenses +
+    insuranceMonthly;
+
+  const totalShortTermLiabilities =
+    creditCardDues + personalLoan + medicalExpenses + otherShortTermExpenses;
+
+  const totalLongTermLiabilities =
+    homeLoan +
+    vehicleLoan +
+    educationLoan +
+    businessLoan +
+    otherLongTermExpenses;
+
+  const monthlySurplus = incomeMonthly - totalMonthlyExpenses;
+  const savingsRatioPct =
+    incomeMonthly > 0
+      ? parseFloat(((monthlySurplus / incomeMonthly) * 100).toFixed(2))
+      : 0;
+
+  return {
+    numberOfDependents: raw.numberOfDependents,
+    householdExpenses,
+    rentAndEmi,
+    educationExpenses,
+    otherExpenses,
+    insuranceMonthly,
+    creditCardDues,
+    personalLoan,
+    medicalExpenses,
+    otherShortTermExpenses,
+    homeLoan,
+    vehicleLoan,
+    educationLoan,
+    businessLoan,
+    otherLongTermExpenses,
+    totalMonthlyExpenses,
+    totalShortTermLiabilities,
+    totalLongTermLiabilities,
+    monthlySurplus,
+    savingsRatioPct,
+  };
 }
 
 function deriveRiskCategory(
@@ -119,32 +152,33 @@ export class FactFindingService {
     private readonly recommendationService: RecommendationService,
   ) {}
 
-  async saveIncomeSources(
-    userId: string,
-    input: z.infer<typeof incomeSourcesSchema>,
-  ) {
+  // Page 2: income sources + amounts + assets
+  async saveIncome(userId: string, input: z.infer<typeof incomeSchema>) {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
-    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "personal_complete",
       "Please complete your personal details first",
     );
 
+    const data = computeIncome(input);
     const advance = shouldAdvanceStage(stage, "personal_complete");
-    await this.repo.upsertIncomeSources(userId, input, advance);
+    await this.repo.upsertIncome(userId, data, advance);
 
     const nextStage = advance
       ? asStage("fact_finding_income_sources")
       : (stage as ProfileStage);
     return {
-      message: "Income sources saved",
+      message: "Income and assets saved",
+      totalMonthly: data.totalMonthly,
+      totalAssets: data.totalAssets,
       completion: getCompletionStatus(nextStage),
     };
   }
 
+  // Page 3: dependents + spend + insurance + liabilities
   async saveFinanceProfile(
     userId: string,
     input: z.infer<typeof financeProfileSchema>,
@@ -152,115 +186,64 @@ export class FactFindingService {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
-    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_income_sources",
-      "Please complete income sources first",
+      "Please complete the income step first",
     );
 
+    const incomeProfile = await this.repo.findIncomeProfile(userId);
+    const data = computeFinanceProfile(input, incomeProfile?.totalMonthly ?? 0);
+
     const advance = shouldAdvanceStage(stage, "fact_finding_income_sources");
-    await this.repo.upsertFinanceProfile(userId, input, advance);
+    await this.repo.upsertFinanceProfile(userId, data, advance);
 
     const nextStage = advance
       ? asStage("fact_finding_dependents")
       : (stage as ProfileStage);
     return {
       message: "Finance profile saved",
-      completion: getCompletionStatus(nextStage),
-    };
-  }
-
-  async saveIncomeAmount(
-    userId: string,
-    input: z.infer<typeof incomeAmountSchema>,
-  ) {
-    const user = await this.repo.findUserStage(userId);
-    const stage = user?.profileStage ?? "";
-
-    assertNotComplete(stage);
-    assertAtLeast(
-      stage,
-      "fact_finding_dependents",
-      "Please complete the finance profile step first",
-    );
-
-    const data = computeIncomeAmount(input);
-    const advance = shouldAdvanceStage(stage, "fact_finding_dependents");
-    await this.repo.upsertIncomeAmount(userId, data, advance);
-
-    const nextStage = advance
-      ? asStage("fact_finding_income_amount")
-      : (stage as ProfileStage);
-    return {
-      message: "Income amount saved",
-      totalMonthly: data.totalMonthly,
-      completion: getCompletionStatus(nextStage),
-    };
-  }
-
-  async saveExpenses(userId: string, input: z.infer<typeof expensesSchema>) {
-    const user = await this.repo.findUserStage(userId);
-    const stage = user?.profileStage ?? "";
-
-    assertNotComplete(stage);
-    assertAtLeast(
-      stage,
-      "fact_finding_income_amount",
-      "Please complete income amount before adding expenses",
-    );
-
-    const income = await this.repo.findIncomeAmountProfile(userId);
-    const data = computeExpenses(input, income?.totalMonthly ?? 0);
-    const advance = shouldAdvanceStage(stage, "fact_finding_income_amount");
-    await this.repo.upsertExpenses(userId, data, advance);
-
-    const nextStage = advance
-      ? asStage("fact_finding_expenses")
-      : (stage as ProfileStage);
-    return {
-      message: "Expense details saved",
-      totalMonthly: input.totalMonthly,
+      totalMonthlyExpenses: data.totalMonthlyExpenses,
+      totalShortTermLiabilities: data.totalShortTermLiabilities,
+      totalLongTermLiabilities: data.totalLongTermLiabilities,
       monthlySurplus: data.monthlySurplus,
       savingsRatioPct: data.savingsRatioPct,
       completion: getCompletionStatus(nextStage),
     };
   }
 
-  async saveAssets(userId: string, input: z.infer<typeof assetsSchema>) {
+  // Page 4: goals + time horizon
+  async saveGoals(userId: string, input: z.infer<typeof goalsSchema>) {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
-    assertNotComplete(stage);
     assertAtLeast(
       stage,
-      "fact_finding_expenses",
-      "Please complete expense details before adding assets",
+      "fact_finding_dependents",
+      "Please complete the finance profile step first",
     );
 
-    const computed = computeAssets(input);
-    const advance = shouldAdvanceStage(stage, "fact_finding_expenses");
-    await this.repo.upsertAssets(userId, input, computed, advance);
+    const advance = shouldAdvanceStage(stage, "fact_finding_dependents");
+    await this.repo.upsertGoals(userId, input, advance);
 
     const nextStage = advance
       ? asStage("fact_finding_assets")
       : (stage as ProfileStage);
     return {
-      message: "Assets saved",
-      totalAssets: computed.totalAssets,
+      message: "Goals saved",
       completion: getCompletionStatus(nextStage),
     };
   }
 
+  // Page 5: risk assessment (optional)
   async saveRisk(userId: string, input: z.infer<typeof riskSchema>) {
     const user = await this.repo.findUserStage(userId);
     const stage = user?.profileStage ?? "";
 
-    assertNotComplete(stage);
     assertAtLeast(
       stage,
       "fact_finding_assets",
-      "Please complete the assets step before the risk assessment",
+      "Please complete the goals step before the risk assessment",
     );
 
     const riskCategory = deriveRiskCategory(
@@ -271,11 +254,44 @@ export class FactFindingService {
 
     await this.repo.upsertRisk(userId, { ...input, riskCategory });
 
+    // Only advance stage and generate recommendation if not already complete
+    const isFirstCompletion = stage === "fact_finding_assets";
+    if (isFirstCompletion) {
+      await this.repo.advanceToComplete(userId);
+    }
     const recommendation = await this.recommendationService.generate(userId);
 
     return {
       message: "Risk profile saved",
       riskCategory,
+      completion: getCompletionStatus("fact_finding_complete"),
+      destination: "dashboard",
+      recommendation: {
+        id: recommendation.id,
+        recommendations: recommendation.recommendations,
+      },
+    };
+  }
+
+  // Page 5: skip risk (goes straight to dashboard with moderate default)
+  async skipRisk(userId: string) {
+    const user = await this.repo.findUserStage(userId);
+    const stage = user?.profileStage ?? "";
+
+    assertAtLeast(
+      stage,
+      "fact_finding_assets",
+      "Please complete the goals step first",
+    );
+
+    const isFirstCompletion = stage === "fact_finding_assets";
+    if (isFirstCompletion) {
+      await this.repo.advanceToComplete(userId);
+    }
+    const recommendation = await this.recommendationService.generate(userId);
+
+    return {
+      message: "Risk assessment skipped",
       completion: getCompletionStatus("fact_finding_complete"),
       destination: "dashboard",
       recommendation: {
@@ -293,10 +309,9 @@ export class FactFindingService {
         ? getCompletionStatus(asStage(data.profileStage))
         : null,
       savedData: {
-        incomeSources: data.incomeSources,
+        income: data.income,
         financeProfile: data.financeProfile,
-        incomeAmount: data.incomeAmount,
-        expenses: data.expenses,
+        goals: data.goals,
         assets: data.assets,
         risk: data.risk,
       },
