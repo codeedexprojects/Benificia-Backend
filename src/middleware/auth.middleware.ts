@@ -17,7 +17,15 @@ export function requireUser(
   _res: Response,
   next: NextFunction,
 ): void {
-  const token = req.cookies[JWT_COOKIE_NAME] as string | undefined;
+  const authHeader = req.headers["authorization"];
+
+  let token: string | undefined;
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7); // mobile / API clients
+  } else {
+    token = req.cookies?.[JWT_COOKIE_NAME]; // web browser (http-only cookie)
+  }
+
   if (!token) throw new UnauthorizedError("Authentication required");
 
   const payload = verifyUserAccessToken(token);
