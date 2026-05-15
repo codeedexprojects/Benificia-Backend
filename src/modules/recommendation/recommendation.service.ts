@@ -27,7 +27,6 @@ export class RecommendationService {
 
     const profile = ctx.profile;
     const income = ctx.incomeProfile;
-    const expense = ctx.expenseProfile;
     const assets = ctx.assetLiabilityProfile;
     const finance = ctx.financeProfile;
     const incomeSrc = ctx.incomeSourcesProfile;
@@ -49,26 +48,29 @@ export class RecommendationService {
       other_monthly: income?.otherMonthly ?? 0,
       monthly_income: income?.totalMonthly ?? 0,
       annual_income: (income?.totalMonthly ?? 0) * 12,
-      // Expenses
-      monthly_expenses: expense?.totalMonthly ?? 0,
-      monthly_surplus: expense?.monthlySurplus ?? 0,
-      savings_ratio_pct: expense?.savingsRatioPct ?? 0,
-      // Assets & liabilities
+      // Expenses & liabilities
+      monthly_expenses: finance?.totalMonthlyExpenses ?? 0,
+      monthly_surplus: finance?.monthlySurplus ?? 0,
+      savings_ratio_pct: finance?.savingsRatioPct ?? 0,
+      insurance_monthly: finance?.insuranceMonthly ?? 0,
+      number_of_dependents: finance?.numberOfDependents ?? 0,
+      total_short_term_liabilities: finance?.totalShortTermLiabilities ?? 0,
+      total_long_term_liabilities: finance?.totalLongTermLiabilities ?? 0,
+      // Assets
       total_assets: assets?.totalAssets ?? 0,
-      liability_types: finance?.liabilityTypes ?? [],
-      insurance_coverage_types: finance?.insuranceCoverageTypes ?? [],
       residential_property: assets?.residentialProperty ?? 0,
       investment: assets?.investment ?? 0,
       savings_bank: assets?.savingsBank ?? 0,
       gold_jewelry: assets?.goldJewelry ?? 0,
       retirement_funds: assets?.retirementFunds ?? 0,
       other_assets: assets?.otherAssets ?? 0,
+      // Goals
+      financial_aims: ctx.goalsProfile?.financialAims ?? [],
+      time_horizon: ctx.goalsProfile?.timeHorizon ?? null,
       // Risk
       risk_category: ctx.riskProfile?.riskCategory ?? null,
       portfolio_drop: ctx.riskProfile?.portfolioDrop ?? null,
       investment_style: ctx.riskProfile?.investmentStyle ?? null,
-      financial_aims: ctx.riskProfile?.financialAims ?? [],
-      time_horizon: ctx.riskProfile?.timeHorizon ?? null,
       market_feeling: ctx.riskProfile?.marketFeeling ?? null,
     };
 

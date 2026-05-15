@@ -83,22 +83,6 @@ enum AssetType {
   other_assets
 }
 
-// ── Liabilities ───────────────────────────────────────────────
-
-enum LiabilityType {
-  credit_card_debt
-  personal_loan
-  mortgage
-}
-
-// ── Insurance Coverage ────────────────────────────────────────
-
-enum InsuranceCoverageType {
-  health_insurance
-  life_insurance
-  property_insurance
-}
-
 // ── Risk Profile ──────────────────────────────────────────────
 
 enum PortfolioDrop {
@@ -119,6 +103,7 @@ enum FinancialAim {
   education
   wealth_building
   repay_debts
+  other
 }
 
 enum TimeHorizon {

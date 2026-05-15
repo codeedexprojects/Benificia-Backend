@@ -19,14 +19,42 @@ model IncomeSourcesProfile {
   @@map("income_sources_profiles")
 }
 
-// Screen: Finance 2 — dependents, liabilities, insurance
+// Screen: Finance 2 — dependents, spend, insurance, liabilities
 model FinanceProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  numberOfDependents     Int                    @default(0) @map("number_of_dependents")
-  liabilityTypes         LiabilityType[]        @map("liability_types")
-  insuranceCoverageTypes InsuranceCoverageType[] @map("insurance_coverage_types")
+  // Dependents
+  numberOfDependents Int @default(0) @map("number_of_dependents")
+
+  // Spend
+  householdExpenses   Float @default(0) @map("household_expenses")
+  rentAndEmi          Float @default(0) @map("rent_and_emi")
+  educationExpenses   Float @default(0) @map("education_expenses")
+  otherExpenses       Float @default(0) @map("other_expenses")
+
+  // Insurance
+  insuranceMonthly Float @default(0) @map("insurance_monthly")
+
+  // Short-term liabilities
+  creditCardDues        Float @default(0) @map("credit_card_dues")
+  personalLoan          Float @default(0) @map("personal_loan")
+  medicalExpenses       Float @default(0) @map("medical_expenses")
+  otherShortTermExpenses Float @default(0) @map("other_short_term_expenses")
+
+  // Long-term liabilities
+  homeLoan              Float @default(0) @map("home_loan")
+  vehicleLoan           Float @default(0) @map("vehicle_loan")
+  educationLoan         Float @default(0) @map("education_loan")
+  businessLoan          Float @default(0) @map("business_loan")
+  otherLongTermExpenses Float @default(0) @map("other_long_term_expenses")
+
+  // Computed totals
+  totalMonthlyExpenses    Float @default(0) @map("total_monthly_expenses")
+  totalShortTermLiabilities Float @default(0) @map("total_short_term_liabilities")
+  totalLongTermLiabilities  Float @default(0) @map("total_long_term_liabilities")
+  monthlySurplus            Float @default(0) @map("monthly_surplus")
+  savingsRatioPct           Float @default(0) @map("savings_ratio_pct")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -58,26 +86,6 @@ model IncomeProfile {
   @@map("income_profiles")
 }
 
-model ExpenseProfile {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @unique @map("user_id") @db.Uuid
-
-  // Total monthly spend (frontend converts yearly → monthly before sending)
-  totalMonthly    Float @default(0) @map("total_monthly")
-
-  // Computed — stored for dashboard reads
-  monthlySurplus  Float @default(0) @map("monthly_surplus")
-  savingsRatioPct Float @default(0) @map("savings_ratio_pct")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("expense_profiles")
-}
-
 // Screen: Finance 5 — assets
 model AssetLiabilityProfile {
   id     String @id @default(uuid()) @db.Uuid
@@ -103,27 +111,31 @@ model AssetLiabilityProfile {
 }
 
 
+// Screen: Goals — what are you aiming for + time horizon
+model GoalsProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+
+  financialAims FinancialAim[] @map("financial_aims")
+  timeHorizon   TimeHorizon    @map("time_horizon")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("goals_profiles")
+}
+
 model RiskProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  // Q1: If your portfolio dropped 20% you would…
-  portfolioDrop PortfolioDrop @map("portfolio_drop")
-
-  // Q2: Which investment style suits you best?
+  portfolioDrop   PortfolioDrop   @map("portfolio_drop")
   investmentStyle InvestmentStyle @map("investment_style")
-
-  // Q3: What are you aiming for? (multi-select, stored as goals)
-  financialAims FinancialAim[] @map("financial_aims")
-
-  // Q4: When do you hope to achieve this?
-  timeHorizon TimeHorizon @map("time_horizon")
-
-  // Q5: How do you feel about market fluctuations?
-  marketFeeling MarketFeeling @map("market_feeling")
-
-  // Derived category
-  riskCategory RiskCategory @map("risk_category")
+  marketFeeling   MarketFeeling   @map("market_feeling")
+  riskCategory    RiskCategory    @map("risk_category")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

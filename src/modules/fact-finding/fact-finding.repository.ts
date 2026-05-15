@@ -1,25 +1,27 @@
 import type { PrismaClient } from "@prisma/client";
 import type { z } from "zod";
 import type {
-  incomeSourcesSchema,
+  incomeSchema,
   financeProfileSchema,
-  incomeAmountSchema,
-  expensesSchema,
-  assetsSchema,
+  goalsSchema,
   riskSchema,
 } from "./fact-finding.schema";
 
-type IncomeSourcesData = z.infer<typeof incomeSourcesSchema>;
-type FinanceProfileData = z.infer<typeof financeProfileSchema>;
-type IncomeAmountData = z.infer<typeof incomeAmountSchema> & {
+type IncomeData = z.infer<typeof incomeSchema> & {
   totalMonthly: number;
+  totalAssets: number;
 };
-type ExpensesData = z.infer<typeof expensesSchema> & {
+type FinanceProfileData = Omit<
+  z.infer<typeof financeProfileSchema>,
+  "frequency"
+> & {
+  totalMonthlyExpenses: number;
+  totalShortTermLiabilities: number;
+  totalLongTermLiabilities: number;
   monthlySurplus: number;
   savingsRatioPct: number;
 };
-type AssetsInput = z.infer<typeof assetsSchema>;
-type AssetsComputed = { totalAssets: number };
+type GoalsData = z.infer<typeof goalsSchema>;
 type RiskData = z.infer<typeof riskSchema> & {
   riskCategory: "conservative" | "moderate" | "aggressive";
 };
@@ -34,79 +36,39 @@ export class FactFindingRepository {
     });
   }
 
-  findIncomeAmountProfile(userId: string) {
+  findIncomeProfile(userId: string) {
     return this.db.incomeProfile.findUnique({
       where: { userId },
       select: { totalMonthly: true },
     });
   }
 
-  async upsertIncomeSources(
+  async upsertIncome(
     userId: string,
-    data: IncomeSourcesData,
-    shouldAdvance: boolean,
-  ): Promise<void> {
-    await this.db.$transaction([
-      this.db.incomeSourcesProfile.upsert({
-        where: { userId },
-        create: { userId, incomeSources: data.incomeSources },
-        update: { incomeSources: data.incomeSources },
-      }),
-      ...(shouldAdvance
-        ? [
-            this.db.user.update({
-              where: { id: userId },
-              data: { profileStage: "fact_finding_income_sources" },
-            }),
-          ]
-        : []),
-    ]);
-  }
-
-  async upsertFinanceProfile(
-    userId: string,
-    data: FinanceProfileData,
-    shouldAdvance: boolean,
-  ): Promise<void> {
-    await this.db.$transaction([
-      this.db.financeProfile.upsert({
-        where: { userId },
-        create: {
-          userId,
-          numberOfDependents: data.numberOfDependents,
-          liabilityTypes: data.liabilityTypes,
-          insuranceCoverageTypes: data.insuranceCoverageTypes,
-        },
-        update: {
-          numberOfDependents: data.numberOfDependents,
-          liabilityTypes: data.liabilityTypes,
-          insuranceCoverageTypes: data.insuranceCoverageTypes,
-        },
-      }),
-      ...(shouldAdvance
-        ? [
-            this.db.user.update({
-              where: { id: userId },
-              data: { profileStage: "fact_finding_dependents" },
-            }),
-          ]
-        : []),
-    ]);
-  }
-
-  async upsertIncomeAmount(
-    userId: string,
-    data: IncomeAmountData,
+    data: IncomeData,
     shouldAdvance: boolean,
   ): Promise<void> {
     const {
+      incomeSources,
       salaryMonthly,
       freelanceMonthly,
       businessMonthly,
       otherMonthly,
       totalMonthly,
+      residentialProperty,
+      investment,
+      savingsBank,
+      goldJewelry,
+      retirementFunds,
+      otherAssets,
+      totalAssets,
     } = data;
     await this.db.$transaction([
+      this.db.incomeSourcesProfile.upsert({
+        where: { userId },
+        create: { userId, incomeSources },
+        update: { incomeSources },
+      }),
       this.db.incomeProfile.upsert({
         where: { userId },
         create: {
@@ -125,55 +87,6 @@ export class FactFindingRepository {
           totalMonthly,
         },
       }),
-      ...(shouldAdvance
-        ? [
-            this.db.user.update({
-              where: { id: userId },
-              data: { profileStage: "fact_finding_income_amount" },
-            }),
-          ]
-        : []),
-    ]);
-  }
-
-  async upsertExpenses(
-    userId: string,
-    data: ExpensesData,
-    shouldAdvance: boolean,
-  ): Promise<void> {
-    const { totalMonthly, monthlySurplus, savingsRatioPct } = data;
-    await this.db.$transaction([
-      this.db.expenseProfile.upsert({
-        where: { userId },
-        create: { userId, totalMonthly, monthlySurplus, savingsRatioPct },
-        update: { totalMonthly, monthlySurplus, savingsRatioPct },
-      }),
-      ...(shouldAdvance
-        ? [
-            this.db.user.update({
-              where: { id: userId },
-              data: { profileStage: "fact_finding_expenses" },
-            }),
-          ]
-        : []),
-    ]);
-  }
-
-  async upsertAssets(
-    userId: string,
-    input: AssetsInput,
-    computed: AssetsComputed,
-    shouldAdvance: boolean,
-  ): Promise<void> {
-    const {
-      residentialProperty,
-      investment,
-      savingsBank,
-      goldJewelry,
-      retirementFunds,
-      otherAssets,
-    } = input;
-    await this.db.$transaction([
       this.db.assetLiabilityProfile.upsert({
         where: { userId },
         create: {
@@ -184,7 +97,7 @@ export class FactFindingRepository {
           goldJewelry,
           retirementFunds,
           otherAssets,
-          totalAssets: computed.totalAssets,
+          totalAssets,
         },
         update: {
           residentialProperty,
@@ -193,7 +106,104 @@ export class FactFindingRepository {
           goldJewelry,
           retirementFunds,
           otherAssets,
-          totalAssets: computed.totalAssets,
+          totalAssets,
+        },
+      }),
+      ...(shouldAdvance
+        ? [
+            this.db.user.update({
+              where: { id: userId },
+              data: { profileStage: "fact_finding_income_sources" },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  async upsertFinanceProfile(
+    userId: string,
+    data: FinanceProfileData,
+    shouldAdvance: boolean,
+  ): Promise<void> {
+    const {
+      numberOfDependents,
+      householdExpenses,
+      rentAndEmi,
+      educationExpenses,
+      otherExpenses,
+      insuranceMonthly,
+      creditCardDues,
+      personalLoan,
+      medicalExpenses,
+      otherShortTermExpenses,
+      homeLoan,
+      vehicleLoan,
+      educationLoan,
+      businessLoan,
+      otherLongTermExpenses,
+      totalMonthlyExpenses,
+      totalShortTermLiabilities,
+      totalLongTermLiabilities,
+      monthlySurplus,
+      savingsRatioPct,
+    } = data;
+
+    const payload = {
+      numberOfDependents,
+      householdExpenses,
+      rentAndEmi,
+      educationExpenses,
+      otherExpenses,
+      insuranceMonthly,
+      creditCardDues,
+      personalLoan,
+      medicalExpenses,
+      otherShortTermExpenses,
+      homeLoan,
+      vehicleLoan,
+      educationLoan,
+      businessLoan,
+      otherLongTermExpenses,
+      totalMonthlyExpenses,
+      totalShortTermLiabilities,
+      totalLongTermLiabilities,
+      monthlySurplus,
+      savingsRatioPct,
+    };
+
+    await this.db.$transaction([
+      this.db.financeProfile.upsert({
+        where: { userId },
+        create: { userId, ...payload },
+        update: payload,
+      }),
+      ...(shouldAdvance
+        ? [
+            this.db.user.update({
+              where: { id: userId },
+              data: { profileStage: "fact_finding_dependents" },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  async upsertGoals(
+    userId: string,
+    data: GoalsData,
+    shouldAdvance: boolean,
+  ): Promise<void> {
+    await this.db.$transaction([
+      this.db.goalsProfile.upsert({
+        where: { userId },
+        create: {
+          userId,
+          financialAims: data.financialAims,
+          timeHorizon: data.timeHorizon,
+        },
+        update: {
+          financialAims: data.financialAims,
+          timeHorizon: data.timeHorizon,
         },
       }),
       ...(shouldAdvance
@@ -208,49 +218,36 @@ export class FactFindingRepository {
   }
 
   async upsertRisk(userId: string, data: RiskData): Promise<void> {
-    const {
-      portfolioDrop,
-      investmentStyle,
-      financialAims,
-      timeHorizon,
-      marketFeeling,
-      riskCategory,
-    } = data;
-    await this.db.$transaction([
-      this.db.riskProfile.upsert({
-        where: { userId },
-        create: {
-          userId,
-          portfolioDrop,
-          investmentStyle,
-          financialAims,
-          timeHorizon,
-          marketFeeling,
-          riskCategory,
-        },
-        update: {
-          portfolioDrop,
-          investmentStyle,
-          financialAims,
-          timeHorizon,
-          marketFeeling,
-          riskCategory,
-        },
-      }),
-      this.db.user.update({
-        where: { id: userId },
-        data: { profileStage: "fact_finding_complete" },
-      }),
-    ]);
+    const { portfolioDrop, investmentStyle, marketFeeling, riskCategory } =
+      data;
+    await this.db.riskProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        portfolioDrop,
+        investmentStyle,
+        marketFeeling,
+        riskCategory,
+      },
+      update: { portfolioDrop, investmentStyle, marketFeeling, riskCategory },
+    });
+  }
+
+  advanceToComplete(userId: string) {
+    return this.db.user.update({
+      where: { id: userId },
+      data: { profileStage: "fact_finding_complete" },
+      select: { id: true },
+    });
   }
 
   async findAllFactFindingData(userId: string) {
     const [
       user,
       incomeSources,
+      incomeProfile,
       financeProfile,
-      incomeAmount,
-      expenses,
+      goals,
       assetProfile,
       risk,
     ] = await Promise.all([
@@ -262,14 +259,6 @@ export class FactFindingRepository {
         where: { userId },
         select: { incomeSources: true },
       }),
-      this.db.financeProfile.findUnique({
-        where: { userId },
-        select: {
-          numberOfDependents: true,
-          liabilityTypes: true,
-          insuranceCoverageTypes: true,
-        },
-      }),
       this.db.incomeProfile.findUnique({
         where: { userId },
         select: {
@@ -280,12 +269,36 @@ export class FactFindingRepository {
           totalMonthly: true,
         },
       }),
-      this.db.expenseProfile.findUnique({
+      this.db.financeProfile.findUnique({
         where: { userId },
         select: {
-          totalMonthly: true,
+          numberOfDependents: true,
+          householdExpenses: true,
+          rentAndEmi: true,
+          educationExpenses: true,
+          otherExpenses: true,
+          insuranceMonthly: true,
+          creditCardDues: true,
+          personalLoan: true,
+          medicalExpenses: true,
+          otherShortTermExpenses: true,
+          homeLoan: true,
+          vehicleLoan: true,
+          educationLoan: true,
+          businessLoan: true,
+          otherLongTermExpenses: true,
+          totalMonthlyExpenses: true,
+          totalShortTermLiabilities: true,
+          totalLongTermLiabilities: true,
           monthlySurplus: true,
           savingsRatioPct: true,
+        },
+      }),
+      this.db.goalsProfile.findUnique({
+        where: { userId },
+        select: {
+          financialAims: true,
+          timeHorizon: true,
         },
       }),
       this.db.assetLiabilityProfile.findUnique({
@@ -305,20 +318,26 @@ export class FactFindingRepository {
         select: {
           portfolioDrop: true,
           investmentStyle: true,
-          financialAims: true,
-          timeHorizon: true,
           marketFeeling: true,
           riskCategory: true,
         },
       }),
     ]);
 
+    const income =
+      incomeSources || incomeProfile || assetProfile
+        ? {
+            ...incomeSources,
+            ...incomeProfile,
+            ...assetProfile,
+          }
+        : null;
+
     return {
       profileStage: user?.profileStage ?? null,
-      incomeSources: incomeSources ?? null,
+      income,
       financeProfile: financeProfile ?? null,
-      incomeAmount: incomeAmount ?? null,
-      expenses: expenses ?? null,
+      goals: goals ?? null,
       assets: assetProfile ?? null,
       risk: risk ?? null,
     };

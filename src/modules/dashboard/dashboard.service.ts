@@ -1,7 +1,6 @@
 import type { DashboardRepository } from "./dashboard.repository";
 import { getCompletionStatus } from "../../utils/profile-completion";
 import { NotFoundError } from "../../utils/errors";
-import type { InsuranceCoverageType } from "@prisma/client";
 
 // ── Health score weights ──────────────────────────────────────
 const WEIGHT_SAVINGS_RATE = 30;
@@ -25,11 +24,8 @@ function scoreEmergencyFund(cashAmount: number, monthlyExp: number) {
     (Math.min(cashAmount / monthlyExp, 6) / 6) * WEIGHT_EMERGENCY_FUND,
   );
 }
-function scoreInsurance(coverageTypes: InsuranceCoverageType[]) {
-  const hasLife = coverageTypes.includes("life_insurance");
-  const hasHealth = coverageTypes.includes("health_insurance");
-  const ratio = ((hasLife ? 1 : 0) + (hasHealth ? 1 : 0)) / 2;
-  return Math.round(ratio * WEIGHT_INSURANCE);
+function scoreInsurance(insuranceMonthly: number) {
+  return insuranceMonthly > 0 ? WEIGHT_INSURANCE : 0;
 }
 
 // ── Risk profile meta ─────────────────────────────────────────
@@ -94,26 +90,22 @@ export class DashboardService {
     if (!data) throw new NotFoundError("User not found");
 
     const income = data.incomeProfile;
-    const expense = data.expenseProfile;
-    const assets = data.assetLiabilityProfile;
     const finance = data.financeProfile;
+    const assets = data.assetLiabilityProfile;
 
     const monthlyIncome = income?.totalMonthly ?? 0;
-    const monthlyExpenses = expense?.totalMonthly ?? 0;
+    const monthlyExpenses = finance?.totalMonthlyExpenses ?? 0;
     const cashAmount = assets?.savingsBank ?? 0;
+    const hasDebts =
+      (finance?.totalShortTermLiabilities ?? 0) > 0 ||
+      (finance?.totalLongTermLiabilities ?? 0) > 0;
 
     const scoreBreakdown = {
-      savingsRate:
-        income && expense ? scoreSavingsRate(expense.savingsRatioPct) : 0,
-      debtLoad: expense
-        ? scoreDebtLoad(
-            (finance?.liabilityTypes?.length ?? 0) > 0,
-            expense.savingsRatioPct,
-          )
-        : 0,
+      savingsRate: finance ? scoreSavingsRate(finance.savingsRatioPct) : 0,
+      debtLoad: finance ? scoreDebtLoad(hasDebts, finance.savingsRatioPct) : 0,
       emergencyFund:
-        assets && expense ? scoreEmergencyFund(cashAmount, monthlyExpenses) : 0,
-      insurance: finance ? scoreInsurance(finance.insuranceCoverageTypes) : 0,
+        assets && finance ? scoreEmergencyFund(cashAmount, monthlyExpenses) : 0,
+      insurance: finance ? scoreInsurance(finance.insuranceMonthly) : 0,
       goals: WEIGHT_GOALS,
     };
 
@@ -137,18 +129,13 @@ export class DashboardService {
         breakdown: scoreBreakdown,
         maxScore: 100,
       },
-      cashFlow:
-        income && expense
-          ? {
-              monthly: expense.monthlySurplus,
-              isDeficit: expense.monthlySurplus < 0,
-            }
-          : null,
-      netWorth: assets
+      cashFlow: finance
         ? {
-            totalAssets: assets.totalAssets,
+            monthly: finance.monthlySurplus,
+            isDeficit: finance.monthlySurplus < 0,
           }
         : null,
+      netWorth: assets ? { totalAssets: assets.totalAssets } : null,
       completion: getCompletionStatus(data.profileStage),
       riskProfile: data.riskProfile
         ? { category: data.riskProfile.riskCategory }
@@ -164,17 +151,17 @@ export class DashboardService {
     if (!data) throw new NotFoundError("User not found");
 
     const income = data.incomeProfile;
-    const e = data.expenseProfile;
+    const finance = data.financeProfile;
 
-    if (!income || !e) {
+    if (!income || !finance) {
       return {
         available: false,
-        message: "Complete income and expense steps to see this chart.",
+        message: "Complete income and finance steps to see this chart.",
       };
     }
 
     const monthlyIncome = income.totalMonthly;
-    const surplus = e.monthlySurplus;
+    const surplus = finance.monthlySurplus;
     const savingsAmount = Math.max(surplus, 0);
 
     const pct = (v: number) =>
@@ -184,16 +171,16 @@ export class DashboardService {
       available: true,
       summary: {
         monthlyIncome,
-        totalExpenses: e.totalMonthly,
+        totalExpenses: finance.totalMonthlyExpenses,
         surplus,
-        savingsRatioPct: e.savingsRatioPct,
+        savingsRatioPct: finance.savingsRatioPct,
         isDeficit: surplus < 0,
       },
       incomeAllocation: [
         {
           label: "Expenses",
-          amount: e.totalMonthly,
-          percentage: pct(e.totalMonthly),
+          amount: finance.totalMonthlyExpenses,
+          percentage: pct(finance.totalMonthlyExpenses),
           color: "#EF4444",
         },
         {
@@ -226,10 +213,10 @@ export class DashboardService {
       available: true,
       summary: {
         totalAssets: a.totalAssets,
+        totalShortTermLiabilities: finance?.totalShortTermLiabilities ?? 0,
+        totalLongTermLiabilities: finance?.totalLongTermLiabilities ?? 0,
       },
       assetComposition: assetComposition(a),
-      liabilityTypes: finance?.liabilityTypes ?? [],
-      insuranceCoverageTypes: finance?.insuranceCoverageTypes ?? [],
     };
   }
 
@@ -252,11 +239,7 @@ export class DashboardService {
 
     const annualIncome = income.totalMonthly * 12;
     const dependents = finance.numberOfDependents ?? 0;
-
-    const coverageTypes = finance.insuranceCoverageTypes;
-    const hasLife = coverageTypes.includes("life_insurance");
-    const hasHealth = coverageTypes.includes("health_insurance");
-    const hasProperty = coverageTypes.includes("property_insurance");
+    const hasCoverage = finance.insuranceMonthly > 0;
 
     const recommendedLifeCover = annualIncome * 10;
     const recommendedHealthCover = 500000 + dependents * 200000;
@@ -264,32 +247,17 @@ export class DashboardService {
     return {
       available: true,
       annualIncome,
-      coverageTypes: {
-        life: hasLife,
-        health: hasHealth,
-        property: hasProperty,
-      },
+      insuranceMonthly: finance.insuranceMonthly,
+      hasCoverage,
       gaps: {
         life: {
-          covered: hasLife,
           recommended: recommendedLifeCover,
-          status: hasLife ? "Covered" : "Not covered",
-          message: hasLife
-            ? `Ensure your life cover is at least ₹${(recommendedLifeCover / 100000).toFixed(0)}L (10× annual income)`
-            : `You need life insurance of at least ₹${(recommendedLifeCover / 100000).toFixed(0)}L`,
+          message: `Ensure your life cover is at least ₹${(recommendedLifeCover / 100000).toFixed(0)}L (10× annual income)`,
         },
         health: {
-          covered: hasHealth,
           recommended: recommendedHealthCover,
           dependentsConsidered: dependents,
-          status: hasHealth ? "Covered" : "Not covered",
-          message: hasHealth
-            ? `Ensure your health cover is at least ₹${(recommendedHealthCover / 100000).toFixed(0)}L for your family`
-            : `You need health insurance of at least ₹${(recommendedHealthCover / 100000).toFixed(0)}L`,
-        },
-        property: {
-          covered: hasProperty,
-          status: hasProperty ? "Covered" : "Not covered",
+          message: `Ensure your health cover is at least ₹${(recommendedHealthCover / 100000).toFixed(0)}L for your family`,
         },
       },
     };
@@ -309,14 +277,9 @@ export class DashboardService {
       };
     }
 
-    const {
-      riskCategory,
-      portfolioDrop,
-      investmentStyle,
-      financialAims,
-      timeHorizon,
-      marketFeeling,
-    } = data.riskProfile;
+    const { riskCategory, portfolioDrop, investmentStyle, marketFeeling } =
+      data.riskProfile;
+    const goals = data.goalsProfile;
     const meta = RISK_META[riskCategory];
 
     return {
@@ -329,9 +292,9 @@ export class DashboardService {
       answers: {
         portfolioDrop,
         investmentStyle,
-        financialAims,
-        timeHorizon,
         marketFeeling,
+        financialAims: goals?.financialAims ?? [],
+        timeHorizon: goals?.timeHorizon ?? null,
       },
     };
   }

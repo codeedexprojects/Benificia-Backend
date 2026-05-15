@@ -30,18 +30,15 @@ export class RecommendationRepository {
             totalMonthly: true,
           },
         },
-        expenseProfile: {
-          select: {
-            totalMonthly: true,
-            monthlySurplus: true,
-            savingsRatioPct: true,
-          },
-        },
         financeProfile: {
           select: {
             numberOfDependents: true,
-            liabilityTypes: true,
-            insuranceCoverageTypes: true,
+            totalMonthlyExpenses: true,
+            totalShortTermLiabilities: true,
+            totalLongTermLiabilities: true,
+            monthlySurplus: true,
+            savingsRatioPct: true,
+            insuranceMonthly: true,
           },
         },
         incomeSourcesProfile: {
@@ -58,13 +55,17 @@ export class RecommendationRepository {
             totalAssets: true,
           },
         },
+        goalsProfile: {
+          select: {
+            financialAims: true,
+            timeHorizon: true,
+          },
+        },
         riskProfile: {
           select: {
             riskCategory: true,
             portfolioDrop: true,
             investmentStyle: true,
-            financialAims: true,
-            timeHorizon: true,
             marketFeeling: true,
           },
         },
