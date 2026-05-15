@@ -47,6 +47,7 @@ export class UserController {
     const { accessToken, refreshToken, user, channel } =
       await this.userService.verifyOtpByIdentifier(identifier, otp, meta);
 
+    // Web: set http-only cookies
     res
       .cookie(JWT_COOKIE_NAME, accessToken, {
         ...JWT_COOKIE_OPTIONS,
@@ -57,6 +58,7 @@ export class UserController {
         maxAge: REFRESH_MAX_AGE,
       });
 
+    // Mobile: tokens also in response body
     sendSuccess(
       res,
       {
@@ -69,13 +71,19 @@ export class UserController {
           profileStage: user.profileStage,
         },
         isNewUser: user.isNewUser,
+        accessToken,
+        refreshToken,
       },
       user.isNewUser ? 201 : 200,
     );
   };
 
   refresh = async (req: Request, res: Response): Promise<void> => {
-    const token = req.cookies[JWT_REFRESH_COOKIE_NAME] as string | undefined;
+    // Mobile sends token in body, web sends via cookie
+    const token =
+      (req.body?.refreshToken as string | undefined) ??
+      (req.cookies?.[JWT_REFRESH_COOKIE_NAME] as string | undefined);
+
     if (!token) {
       res.status(401).json({ success: false, message: "No refresh token" });
       return;
@@ -84,6 +92,7 @@ export class UserController {
     const { accessToken, refreshToken } =
       await this.userService.refreshSession(token);
 
+    // Refresh web cookies
     res
       .cookie(JWT_COOKIE_NAME, accessToken, {
         ...JWT_COOKIE_OPTIONS,
@@ -94,7 +103,7 @@ export class UserController {
         maxAge: REFRESH_MAX_AGE,
       });
 
-    sendSuccess(res, { message: "Session refreshed" });
+    sendSuccess(res, { accessToken, refreshToken });
   };
 
   // ── Profile photo ─────────────────────────────────────────────
@@ -129,7 +138,7 @@ export class UserController {
     sendSuccess(res, result);
   };
 
-  // ── Profile completion ─────────────────────────────────────────
+  // ── Profile ───────────────────────────────────────────────────
 
   getProfile = async (req: Request, res: Response): Promise<void> => {
     const result = await this.userService.getProfile(req.user!.id);
@@ -149,17 +158,20 @@ export class UserController {
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {
-    const token = req.cookies[JWT_REFRESH_COOKIE_NAME] as string | undefined;
+    const token =
+      (req.body?.refreshToken as string | undefined) ??
+      (req.cookies?.[JWT_REFRESH_COOKIE_NAME] as string | undefined);
 
     if (token) {
       try {
         const payload = verifyUserRefreshToken(token);
         await this.userService.logout(payload.sub, payload.sessionId);
       } catch {
-        // Token invalid/expired — clear cookies regardless
+        // Token invalid/expired — revoke silently
       }
     }
 
+    // Clear web cookies
     res
       .clearCookie(JWT_COOKIE_NAME, { path: "/" })
       .clearCookie(JWT_REFRESH_COOKIE_NAME, { path: "/" });
