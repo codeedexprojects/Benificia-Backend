@@ -29,7 +29,7 @@ export const listUsersSchema = z.object({
       "personal_complete",
       "fact_finding_income",
       "fact_finding_expenses",
-      "fact_finding_assets",
+      "fact_finding_goals",
       "fact_finding_goals",
       "fact_finding_risk",
       "fact_finding_complete",

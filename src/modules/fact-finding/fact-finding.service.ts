@@ -18,8 +18,8 @@ type ProfileStageStr = string;
 const STAGE_ORDER: Record<string, number> = {
   personal_complete: 0,
   fact_finding_income_sources: 1,
-  fact_finding_dependents: 2,
-  fact_finding_assets: 3,
+  fact_finding_liabilities: 2,
+  fact_finding_goals: 3,
   fact_finding_complete: 4,
   recommendations_ready: 5,
 };
@@ -199,7 +199,7 @@ export class FactFindingService {
     await this.repo.upsertFinanceProfile(userId, data, advance);
 
     const nextStage = advance
-      ? asStage("fact_finding_dependents")
+      ? asStage("fact_finding_liabilities")
       : (stage as ProfileStage);
     return {
       message: "Finance profile saved",
@@ -219,15 +219,15 @@ export class FactFindingService {
 
     assertAtLeast(
       stage,
-      "fact_finding_dependents",
+      "fact_finding_liabilities",
       "Please complete the finance profile step first",
     );
 
-    const advance = shouldAdvanceStage(stage, "fact_finding_dependents");
+    const advance = shouldAdvanceStage(stage, "fact_finding_liabilities");
     await this.repo.upsertGoals(userId, input, advance);
 
     const nextStage = advance
-      ? asStage("fact_finding_assets")
+      ? asStage("fact_finding_goals")
       : (stage as ProfileStage);
     return {
       message: "Goals saved",
@@ -242,7 +242,7 @@ export class FactFindingService {
 
     assertAtLeast(
       stage,
-      "fact_finding_assets",
+      "fact_finding_goals",
       "Please complete the goals step before the risk assessment",
     );
 
@@ -255,7 +255,7 @@ export class FactFindingService {
     await this.repo.upsertRisk(userId, { ...input, riskCategory });
 
     // Only advance stage and generate recommendation if not already complete
-    const isFirstCompletion = stage === "fact_finding_assets";
+    const isFirstCompletion = stage === "fact_finding_goals";
     if (isFirstCompletion) {
       await this.repo.advanceToComplete(userId);
     }
@@ -280,11 +280,11 @@ export class FactFindingService {
 
     assertAtLeast(
       stage,
-      "fact_finding_assets",
+      "fact_finding_goals",
       "Please complete the goals step first",
     );
 
-    const isFirstCompletion = stage === "fact_finding_assets";
+    const isFirstCompletion = stage === "fact_finding_goals";
     if (isFirstCompletion) {
       await this.repo.advanceToComplete(userId);
     }

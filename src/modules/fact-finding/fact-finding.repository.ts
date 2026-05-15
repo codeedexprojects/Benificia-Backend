@@ -181,7 +181,7 @@ export class FactFindingRepository {
         ? [
             this.db.user.update({
               where: { id: userId },
-              data: { profileStage: "fact_finding_dependents" },
+              data: { profileStage: "fact_finding_liabilities" },
             }),
           ]
         : []),
@@ -210,7 +210,7 @@ export class FactFindingRepository {
         ? [
             this.db.user.update({
               where: { id: userId },
-              data: { profileStage: "fact_finding_assets" },
+              data: { profileStage: "fact_finding_goals" },
             }),
           ]
         : []),
