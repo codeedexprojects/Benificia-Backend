@@ -24,6 +24,7 @@ router.use("/users", usersRoutes(adminController));
 
 // Health centres
 router.use("/health-centres", adminHealthRoutes(healthController));
+
 router.get("/auth/me", requireAdmin, adminController.getMe);
 
 // AI server proxy (all routes require admin auth)

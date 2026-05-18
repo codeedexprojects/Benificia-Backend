@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 import type { RecommendationRepository } from "./recommendation.repository";
-import { callAiRecommendations } from "../../utils/ai-client";
+import {
+  callAiRecommendations,
+  type AiRecommendationItem,
+  type AiRecommendationResponse,
+} from "../../utils/ai-client";
 import { BadRequestError, NotFoundError } from "../../utils/errors";
 
 const ALLOWED_STAGES = new Set([
@@ -9,6 +13,42 @@ const ALLOWED_STAGES = new Set([
 ]);
 
 const TOP_N = 5;
+
+// ── Vertical detection ────────────────────────────────────────
+// Derives which AI verticals to call purely from collected fact-finding data.
+// Returns one or both of "insurance" | "investment".
+function determineVerticals(userContext: Record<string, unknown>): string[] {
+  const monthlyIncome = (userContext["monthly_income"] as number) ?? 0;
+  const insuranceMonthly = (userContext["insurance_monthly"] as number) ?? 0;
+  const dependents = (userContext["number_of_dependents"] as number) ?? 0;
+  const investmentAsset = (userContext["investment"] as number) ?? 0;
+  const savingsRatio = (userContext["savings_ratio_pct"] as number) ?? 0;
+  const riskCategory = (userContext["risk_category"] as string) ?? null;
+  const financialAims = (userContext["financial_aims"] as string[]) ?? [];
+
+  const INVESTMENT_AIMS = new Set([
+    "retirement",
+    "wealth_building",
+    "home_ownership",
+    "education",
+  ]);
+
+  // Insurance gap: no or zero existing coverage and has income / dependents
+  const needsInsurance =
+    (insuranceMonthly === 0 && monthlyIncome > 0) || dependents > 0;
+
+  // Investment gap: no existing investments, surplus available, goals align, or risk-tolerant
+  const needsInvestment =
+    (investmentAsset === 0 && savingsRatio > 0) ||
+    financialAims.some((a) => INVESTMENT_AIMS.has(a)) ||
+    riskCategory === "aggressive" ||
+    riskCategory === "moderate";
+
+  if (needsInsurance && needsInvestment) return ["insurance", "investment"];
+  if (needsInvestment) return ["investment"];
+  // Default to insurance when no clear investment signal
+  return ["insurance"];
+}
 
 export class RecommendationService {
   constructor(private readonly repo: RecommendationRepository) {}
@@ -31,16 +71,13 @@ export class RecommendationService {
     const finance = ctx.financeProfile;
     const incomeSrc = ctx.incomeSourcesProfile;
 
-    // Build user_context payload for the AI server
     const userContext: Record<string, unknown> = {
       user_id: ctx.id,
-      // Demographics
       gender: profile?.gender ?? null,
       marital_status: profile?.maritalStatus ?? null,
       age: profile?.age ?? null,
       city: profile?.city ?? null,
       state: profile?.state ?? null,
-      // Income
       income_sources: incomeSrc?.incomeSources ?? [],
       salary_monthly: income?.salaryMonthly ?? 0,
       freelance_monthly: income?.freelanceMonthly ?? 0,
@@ -48,7 +85,6 @@ export class RecommendationService {
       other_monthly: income?.otherMonthly ?? 0,
       monthly_income: income?.totalMonthly ?? 0,
       annual_income: (income?.totalMonthly ?? 0) * 12,
-      // Expenses & liabilities
       monthly_expenses: finance?.totalMonthlyExpenses ?? 0,
       monthly_surplus: finance?.monthlySurplus ?? 0,
       savings_ratio_pct: finance?.savingsRatioPct ?? 0,
@@ -56,7 +92,6 @@ export class RecommendationService {
       number_of_dependents: finance?.numberOfDependents ?? 0,
       total_short_term_liabilities: finance?.totalShortTermLiabilities ?? 0,
       total_long_term_liabilities: finance?.totalLongTermLiabilities ?? 0,
-      // Assets
       total_assets: assets?.totalAssets ?? 0,
       residential_property: assets?.residentialProperty ?? 0,
       investment: assets?.investment ?? 0,
@@ -64,35 +99,47 @@ export class RecommendationService {
       gold_jewelry: assets?.goldJewelry ?? 0,
       retirement_funds: assets?.retirementFunds ?? 0,
       other_assets: assets?.otherAssets ?? 0,
-      // Goals
       financial_aims: ctx.goalsProfile?.financialAims ?? [],
       time_horizon: ctx.goalsProfile?.timeHorizon ?? null,
-      // Risk
       risk_category: ctx.riskProfile?.riskCategory ?? null,
       portfolio_drop: ctx.riskProfile?.portfolioDrop ?? null,
       investment_style: ctx.riskProfile?.investmentStyle ?? null,
       market_feeling: ctx.riskProfile?.marketFeeling ?? null,
     };
 
+    const verticals = determineVerticals(userContext);
     const requestId = randomUUID();
     const version = (await this.repo.getVersionCount(userId)) + 1;
 
-    const result = await callAiRecommendations({
-      request_id: requestId,
-      vertical: "health",
-      user_context: userContext,
-      top_n: TOP_N,
-    });
+    // Call AI for each required vertical in parallel
+    const aiCalls = verticals.map((vertical) =>
+      callAiRecommendations({
+        request_id: `${requestId}-${vertical}`,
+        vertical,
+        user_context: userContext,
+        top_n: TOP_N,
+      }).then((res) => ({ vertical, res })),
+    );
+
+    const results = await Promise.all(aiCalls);
+
+    const insuranceResult =
+      results.find((r) => r.vertical === "insurance")?.res ?? null;
+    const investmentResult =
+      results.find((r) => r.vertical === "investment")?.res ?? null;
 
     const saved = await this.repo.saveRecommendation({
       userId,
-      insuranceOutput: result,
-      investmentOutput: {},
-      fullPayloadSent: { request_id: requestId, user_context: userContext },
+      insuranceOutput: insuranceResult ?? {},
+      investmentOutput: investmentResult ?? {},
+      fullPayloadSent: {
+        request_id: requestId,
+        verticals,
+        user_context: userContext,
+      },
       version,
     });
 
-    // Advance profile stage if this is the first generation
     if (ctx.profileStage === "fact_finding_complete") {
       await this.repo.advanceStage(userId);
     }
@@ -102,12 +149,10 @@ export class RecommendationService {
       status: saved.status,
       version: saved.version,
       generatedAt: saved.generatedAt,
-      recommendations: result.recommendations,
-      meta: {
-        llmProvider: result.llm_provider,
-        model: result.model,
-        latencyMs: result.latency_ms,
-      },
+      verticals,
+      insurance: insuranceResult?.recommendations ?? [],
+      investment: investmentResult?.recommendations ?? [],
+      meta: buildMeta(results.map((r) => r.res)),
     };
   }
 
@@ -123,10 +168,16 @@ export class RecommendationService {
       };
     }
 
-    // Mark as viewed if first time
     if (!rec.viewedAt) {
       await this.repo.markViewed(rec.id);
     }
+
+    const insuranceRecs = extractRecommendations(rec.insuranceOutput);
+    const investmentRecs = extractRecommendations(rec.investmentOutput);
+
+    const verticals: string[] = [];
+    if (insuranceRecs.length > 0) verticals.push("insurance");
+    if (investmentRecs.length > 0) verticals.push("investment");
 
     return {
       available: true,
@@ -135,9 +186,28 @@ export class RecommendationService {
       version: rec.version,
       generatedAt: rec.generatedAt,
       viewedAt: rec.viewedAt,
-      recommendations:
-        (rec.insuranceOutput as { recommendations?: unknown[] })
-          ?.recommendations ?? [],
+      verticals,
+      insurance: insuranceRecs,
+      investment: investmentRecs,
     };
   }
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function extractRecommendations(output: unknown): AiRecommendationItem[] {
+  if (!output || typeof output !== "object") return [];
+  const o = output as { recommendations?: AiRecommendationItem[] };
+  return Array.isArray(o.recommendations) ? o.recommendations : [];
+}
+
+function buildMeta(results: AiRecommendationResponse[]) {
+  if (results.length === 0) return null;
+  // Surface meta from the first available call
+  const first = results[0]!;
+  return {
+    llmProvider: first.llm_provider,
+    model: first.model,
+    totalLatencyMs: results.reduce((sum, r) => sum + r.latency_ms, 0),
+  };
 }
