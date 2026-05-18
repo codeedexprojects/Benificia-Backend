@@ -268,7 +268,9 @@ export class FactFindingService {
       destination: "dashboard",
       recommendation: {
         id: recommendation.id,
-        recommendations: recommendation.recommendations,
+        verticals: recommendation.verticals,
+        insurance: recommendation.insurance,
+        investment: recommendation.investment,
       },
     };
   }
@@ -296,7 +298,9 @@ export class FactFindingService {
       destination: "dashboard",
       recommendation: {
         id: recommendation.id,
-        recommendations: recommendation.recommendations,
+        verticals: recommendation.verticals,
+        insurance: recommendation.insurance,
+        investment: recommendation.investment,
       },
     };
   }
