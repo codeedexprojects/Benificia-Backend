@@ -38,4 +38,15 @@ export class DashboardController {
     const result = await this.dashboardService.getRiskProfile(req.user!.id);
     sendSuccess(res, result);
   };
+
+  downloadReport = async (req: Request, res: Response): Promise<void> => {
+    const pdfBuffer = await this.dashboardService.generatePdfReport(
+      req.user!.id,
+    );
+    const filename = `financial-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.end(pdfBuffer);
+  };
 }

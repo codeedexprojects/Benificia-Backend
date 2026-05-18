@@ -12,6 +12,7 @@ export function dashboardRoutes(controller: DashboardController): Router {
   router.get("/insurance", controller.getInsuranceCoverage);
   router.get("/goals", controller.getGoalsTracker);
   router.get("/risk-profile", controller.getRiskProfile);
+  router.get("/report", controller.downloadReport);
 
   return router;
 }

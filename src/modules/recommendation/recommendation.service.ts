@@ -16,7 +16,7 @@ const TOP_N = 5;
 
 // ── Vertical detection ────────────────────────────────────────
 // Derives which AI verticals to call purely from collected fact-finding data.
-// Returns one or both of "insurance" | "investment".
+// Returns one or both of "health" | "investment".
 function determineVerticals(userContext: Record<string, unknown>): string[] {
   const monthlyIncome = (userContext["monthly_income"] as number) ?? 0;
   const insuranceMonthly = (userContext["insurance_monthly"] as number) ?? 0;
@@ -33,8 +33,8 @@ function determineVerticals(userContext: Record<string, unknown>): string[] {
     "education",
   ]);
 
-  // Insurance gap: no or zero existing coverage and has income / dependents
-  const needsInsurance =
+  // Health/insurance gap: no or zero existing coverage and has income / dependents
+  const needsHealth =
     (insuranceMonthly === 0 && monthlyIncome > 0) || dependents > 0;
 
   // Investment gap: no existing investments, surplus available, goals align, or risk-tolerant
@@ -44,10 +44,10 @@ function determineVerticals(userContext: Record<string, unknown>): string[] {
     riskCategory === "aggressive" ||
     riskCategory === "moderate";
 
-  if (needsInsurance && needsInvestment) return ["insurance", "investment"];
+  if (needsHealth && needsInvestment) return ["health", "investment"];
   if (needsInvestment) return ["investment"];
-  // Default to insurance when no clear investment signal
-  return ["insurance"];
+  // Default to health when no clear investment signal
+  return ["health"];
 }
 
 export class RecommendationService {
@@ -123,14 +123,14 @@ export class RecommendationService {
 
     const results = await Promise.all(aiCalls);
 
-    const insuranceResult =
-      results.find((r) => r.vertical === "insurance")?.res ?? null;
+    const healthResult =
+      results.find((r) => r.vertical === "health")?.res ?? null;
     const investmentResult =
       results.find((r) => r.vertical === "investment")?.res ?? null;
 
     const saved = await this.repo.saveRecommendation({
       userId,
-      insuranceOutput: insuranceResult ?? {},
+      insuranceOutput: healthResult ?? {},
       investmentOutput: investmentResult ?? {},
       fullPayloadSent: {
         request_id: requestId,
@@ -150,7 +150,7 @@ export class RecommendationService {
       version: saved.version,
       generatedAt: saved.generatedAt,
       verticals,
-      insurance: insuranceResult?.recommendations ?? [],
+      health: healthResult?.recommendations ?? [],
       investment: investmentResult?.recommendations ?? [],
       meta: buildMeta(results.map((r) => r.res)),
     };
@@ -172,11 +172,11 @@ export class RecommendationService {
       await this.repo.markViewed(rec.id);
     }
 
-    const insuranceRecs = extractRecommendations(rec.insuranceOutput);
+    const healthRecs = extractRecommendations(rec.insuranceOutput);
     const investmentRecs = extractRecommendations(rec.investmentOutput);
 
     const verticals: string[] = [];
-    if (insuranceRecs.length > 0) verticals.push("insurance");
+    if (healthRecs.length > 0) verticals.push("health");
     if (investmentRecs.length > 0) verticals.push("investment");
 
     return {
@@ -187,7 +187,7 @@ export class RecommendationService {
       generatedAt: rec.generatedAt,
       viewedAt: rec.viewedAt,
       verticals,
-      insurance: insuranceRecs,
+      health: healthRecs,
       investment: investmentRecs,
     };
   }
