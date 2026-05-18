@@ -269,7 +269,7 @@ export class FactFindingService {
       recommendation: {
         id: recommendation.id,
         verticals: recommendation.verticals,
-        insurance: recommendation.insurance,
+        health: recommendation.health,
         investment: recommendation.investment,
       },
     };
@@ -299,7 +299,7 @@ export class FactFindingService {
       recommendation: {
         id: recommendation.id,
         verticals: recommendation.verticals,
-        insurance: recommendation.insurance,
+        health: recommendation.health,
         investment: recommendation.investment,
       },
     };
