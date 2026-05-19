@@ -5,7 +5,7 @@ const phoneSchema = z
   .string()
   .regex(
     /^\+[1-9]\d{6,14}$/,
-    "Phone must be in E.164 format (e.g. +919876543210)",
+    "Phone must be in E.164 format (e.g. +12345678900)",
   );
 
 export const sendEmailOtpSchema = z.object({

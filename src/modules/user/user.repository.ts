@@ -212,6 +212,7 @@ export class UserRepository {
       select: {
         id: true,
         email: true,
+        phone: true,
         profileStage: true,
         profile: {
           select: {

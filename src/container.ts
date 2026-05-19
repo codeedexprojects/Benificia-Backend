@@ -6,7 +6,12 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { env } from "./config/env";
 import { logger } from "./utils/logger";
 
-const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+const adapter = new PrismaPg({
+  connectionString: env.DATABASE_URL,
+  max: env.DB_POOL_MAX,
+  idleTimeoutMillis: env.DB_POOL_IDLE_TIMEOUT_MS,
+  connectionTimeoutMillis: env.DB_POOL_CONNECTION_TIMEOUT_MS,
+});
 
 export const prisma = new PrismaClient({
   adapter,
