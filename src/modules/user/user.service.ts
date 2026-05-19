@@ -408,7 +408,7 @@ export class UserService {
       return { ...result, channel: "phone" };
     }
     throw new BadRequestError(
-      "Identifier must be a valid email address or E.164 phone number (e.g. +919876543210)",
+      "Identifier must be a valid email address or E.164 phone number (e.g. +12345678900)",
     );
   }
 
@@ -426,7 +426,7 @@ export class UserService {
       return { ...result, channel: "phone" };
     }
     throw new BadRequestError(
-      "Identifier must be a valid email address or E.164 phone number (e.g. +919876543210)",
+      "Identifier must be a valid email address or E.164 phone number (e.g. +12345678900)",
     );
   }
 
@@ -532,6 +532,7 @@ export class UserService {
       user: {
         id: user.id,
         email: user.email,
+        phone: user.phone,
         profileStage: user.profileStage,
       },
       profile: user.profile ? { ...profileRest, photoUrl } : null,

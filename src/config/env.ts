@@ -8,6 +8,13 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
 
   DATABASE_URL: z.string().min(1),
+  DB_POOL_MAX: z.coerce.number().int().positive().default(10),
+  DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5000),
 
   REDIS_URL: z.string().min(1),
 

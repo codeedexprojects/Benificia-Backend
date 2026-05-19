@@ -1,11 +1,13 @@
 import "dotenv/config";
 import { app } from "./app";
 import { prisma, redis } from "./container";
+import { initRateLimiters } from "./middleware/rateLimit.middleware";
 import { env } from "./config/env";
 import { logger } from "./utils/logger";
 
 async function bootstrap(): Promise<void> {
   await redis.connect();
+  initRateLimiters();
   logger.info("Redis connected");
 
   await prisma.$connect();
