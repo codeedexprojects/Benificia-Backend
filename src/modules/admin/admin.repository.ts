@@ -255,6 +255,82 @@ export class AdminRepository {
     });
   }
 
+  async getDashboardStats() {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalUsers,
+      activeUsers,
+      newUsersThisWeek,
+      profileStageCounts,
+      riskCategoryCounts,
+      recommendationStatusCounts,
+      insuranceInterestCounts,
+      recentAuditLogs,
+    ] = await Promise.all([
+      this.prisma.user.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where: { deletedAt: null, isActive: true } }),
+      this.prisma.user.count({
+        where: { deletedAt: null, createdAt: { gte: weekAgo } },
+      }),
+      this.prisma.user.groupBy({
+        by: ["profileStage"],
+        where: { deletedAt: null },
+        _count: { _all: true },
+      }),
+      this.prisma.riskProfile.groupBy({
+        by: ["riskCategory"],
+        _count: { _all: true },
+      }),
+      this.prisma.aiRecommendation.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      this.prisma.insuranceInterest.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      this.prisma.adminAuditLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          action: true,
+          targetTable: true,
+          targetId: true,
+          createdAt: true,
+          admin: { select: { name: true, email: true } },
+        },
+      }),
+    ]);
+
+    return {
+      users: {
+        total: totalUsers,
+        active: activeUsers,
+        blocked: totalUsers - activeUsers,
+        newThisWeek: newUsersThisWeek,
+      },
+      profileFunnel: profileStageCounts.map((p) => ({
+        stage: p.profileStage,
+        count: p._count._all,
+      })),
+      riskDistribution: riskCategoryCounts.map((r) => ({
+        category: r.riskCategory,
+        count: r._count._all,
+      })),
+      recommendations: recommendationStatusCounts.map((r) => ({
+        status: r.status,
+        count: r._count._all,
+      })),
+      insuranceInterests: insuranceInterestCounts.map((i) => ({
+        status: i.status,
+        count: i._count._all,
+      })),
+      recentActivity: recentAuditLogs,
+    };
+  }
+
   createAdminAuditLog(data: {
     adminId: string;
     action: string;

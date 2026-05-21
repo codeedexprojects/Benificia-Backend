@@ -126,6 +126,11 @@ export class AdminController {
     sendSuccess(res, { message: "Logged out" });
   };
 
+  getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
+    const stats = await this.adminService.getDashboardStats();
+    sendSuccess(res, stats);
+  };
+
   getMe = async (req: Request, res: Response): Promise<void> => {
     if (!req.admin) {
       res.status(401).json({ success: false, message: "Unauthorized" });
