@@ -193,9 +193,9 @@ export class AdminRepository {
         deletedAt: true,
         profile: true,
         incomeProfile: true,
-        expenseProfile: true,
+        financeProfile: true,
         assetLiabilityProfile: true,
-        financialGoals: { orderBy: { priority: "asc" } },
+        goalsProfile: true,
         riskProfile: true,
         aiRecommendations: {
           orderBy: { generatedAt: "desc" },
