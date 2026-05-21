@@ -277,6 +277,10 @@ export class AdminService {
     ]);
   }
 
+  async getDashboardStats() {
+    return this.adminRepository.getDashboardStats();
+  }
+
   async getProfile(adminId: string) {
     const admin = await this.adminRepository.findById(adminId);
     if (!admin || !admin.isActive) {

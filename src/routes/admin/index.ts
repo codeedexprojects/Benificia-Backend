@@ -19,6 +19,9 @@ router.post("/auth/verify-otp", authRateLimit, adminController.verifyOtp);
 router.post("/auth/refresh", adminController.refresh);
 router.post("/auth/logout", adminController.logout);
 
+// Dashboard stats
+router.get("/dashboard/stats", requireAdmin, adminController.getDashboardStats);
+
 // User management
 router.use("/users", usersRoutes(adminController));
 
