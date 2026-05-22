@@ -21,7 +21,7 @@ const PAGE_MARGIN = 40;
 
 // ── Formatters ────────────────────────────────────────────────
 const INR = (n: number) =>
-  "₹" + Math.abs(Math.round(n)).toLocaleString("en-IN");
+  "Rs." + Math.abs(Math.round(n)).toLocaleString("en-IN");
 
 const PCT = (n: number) => `${n.toFixed(1)}%`;
 
@@ -176,9 +176,16 @@ function scoreCard(
 
   const color = score >= 75 ? C.green : score >= 50 ? C.amber : C.red;
 
-  // Score circle
+  // "HEALTH SCORE" label sits above the circle
+  doc
+    .font(FONT_REGULAR)
+    .fontSize(8)
+    .fillColor(C.muted)
+    .text("HEALTH SCORE", x + 10, y + 8, { width: w - 20, align: "center" });
+
+  // Score circle — center at y+41 so top (y+19) clears the label (ends ~y+17)
   const cx = x + w / 2;
-  const cy = y + 36;
+  const cy = y + 41;
   doc.save().circle(cx, cy, 22).strokeColor(color).lineWidth(3).stroke();
   doc.restore();
 
@@ -194,15 +201,10 @@ function scoreCard(
     .text("/ 100", cx - 16, cy + 7, { width: 32, align: "center" });
 
   doc
-    .font(FONT_REGULAR)
-    .fontSize(8)
-    .fillColor(C.muted)
-    .text("HEALTH SCORE", x + 10, y + 14, { width: w - 20 });
-  doc
     .font(FONT_BOLD)
     .fontSize(8)
     .fillColor(color)
-    .text(label, x + 10, y + 63, { width: w - 20, align: "center" });
+    .text(label, x + 10, y + 66, { width: w - 20, align: "center" });
 }
 
 // ── Progress bar ──────────────────────────────────────────────
@@ -270,12 +272,19 @@ function drawFooter(doc: PDFKit.PDFDocument) {
   for (let i = 0; i < pages.count; i++) {
     doc.switchToPage(pages.start + i);
     const footerY = doc.page.height - 28;
+
     doc
       .moveTo(PAGE_MARGIN, footerY)
       .lineTo(PAGE_W - PAGE_MARGIN, footerY)
       .strokeColor(C.border)
       .lineWidth(0.5)
       .stroke();
+
+    // footerY+6 is inside the bottom margin area (page.height-22 > page.height-40).
+    // Temporarily zero the bottom margin so PDFKit's maxY() extends to the full
+    // page height, allowing text to render there without triggering a new page.
+    (doc.page as any).margins.bottom = 0;
+
     doc
       .font(FONT_REGULAR)
       .fontSize(7.5)
@@ -284,8 +293,12 @@ function drawFooter(doc: PDFKit.PDFDocument) {
         "This report is generated for informational purposes only and does not constitute financial advice.  |  Beneficia",
         PAGE_MARGIN,
         footerY + 6,
-        { width: CONTENT_W, align: "center" },
+        { width: CONTENT_W, align: "center", lineBreak: false },
       );
+
+    // Restore bottom margin and park the cursor safely at top of page
+    (doc.page as any).margins.bottom = PAGE_MARGIN;
+    doc.y = PAGE_MARGIN;
   }
 }
 
@@ -481,7 +494,7 @@ export async function buildFinancialReport(data: ReportData): Promise<Buffer> {
         .font(FONT_REGULAR)
         .fontSize(9)
         .fillColor(C.muted)
-        .text(b.label, PAGE_MARGIN + 8, y + 2, { width: barLabelW });
+        .text(b.label, PAGE_MARGIN + 8, y + 5, { width: barLabelW });
       progressBar(
         doc,
         PAGE_MARGIN + barLabelW + 8,
@@ -498,8 +511,8 @@ export async function buildFinancialReport(data: ReportData): Promise<Buffer> {
         .text(
           `${b.val}/${b.max}`,
           PAGE_MARGIN + barLabelW + barAreaW + 14,
-          y + 2,
-          { width: 40 },
+          y + 5,
+          { width: 40, align: "right" },
         );
       y += 22;
     });
