@@ -10,6 +10,7 @@ export function recommendationRoutes(
 
   router.post("/generate", controller.generate);
   router.get("/latest", controller.getLatest);
+  router.post("/interest", controller.expressInterest);
 
   return router;
 }

@@ -131,12 +131,14 @@ model InsuranceInterest {
   status       InterestStatus @default(pending)
   callbackTime String?        @map("callback_time") @db.VarChar(100)
   notes        String?        @db.VarChar(500)
+  metadata     Json?
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
   user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, productId])
   @@index([userId])
   @@index([productId])
   @@index([status])

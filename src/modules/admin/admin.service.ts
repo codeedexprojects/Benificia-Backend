@@ -195,7 +195,15 @@ export class AdminService {
   // ── User management ───────────────────────────────────────────
 
   async listUsers(query: z.infer<typeof listUsersSchema>) {
-    const { page, limit, search, isActive, profileStage } = query;
+    const {
+      page,
+      limit,
+      search,
+      isActive,
+      profileStage,
+      incomplete,
+      contacted,
+    } = query;
     const skip = (page - 1) * limit;
 
     const [users, total] = await this.adminRepository.listUsers({
@@ -204,6 +212,8 @@ export class AdminService {
       search,
       isActive,
       profileStage,
+      incomplete,
+      contacted,
     });
 
     return {
@@ -267,6 +277,12 @@ export class AdminService {
     ]);
 
     return { message: `User ${user.email} has been unblocked` };
+  }
+
+  async updateContact(userId: string, contacted: boolean, note?: string) {
+    const user = await this.adminRepository.getUserDetail(userId);
+    if (!user) throw new NotFoundError("User not found");
+    return this.adminRepository.updateContact(userId, contacted, note);
   }
 
   async logout(adminId: string, sessionId: string): Promise<void> {

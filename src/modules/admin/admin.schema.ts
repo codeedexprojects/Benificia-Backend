@@ -36,6 +36,19 @@ export const listUsersSchema = z.object({
       "recommendations_ready",
     ])
     .optional(),
+  incomplete: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
+  contacted: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
+});
+
+export const updateContactSchema = z.object({
+  contacted: z.boolean(),
+  note: z.string().max(2000).optional(),
 });
 
 export const blockUserSchema = z.object({

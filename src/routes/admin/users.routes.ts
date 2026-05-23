@@ -19,6 +19,7 @@ export function usersRoutes(controller: AdminController): Router {
     requireRole("super_admin", "product_admin"),
     controller.unblockUser,
   );
+  router.patch("/:id/contact", controller.updateContact);
 
   return router;
 }
