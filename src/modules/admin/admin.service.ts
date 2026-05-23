@@ -216,8 +216,13 @@ export class AdminService {
       contacted,
     });
 
+    const numberedUsers = users.map((user, index) => ({
+      ...user,
+      slNo: total - skip - index,
+    }));
+
     return {
-      users,
+      users: numberedUsers,
       meta: {
         total,
         page,
