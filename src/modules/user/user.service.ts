@@ -547,23 +547,21 @@ export class UserService {
     const user = await this.userRepository.getFullProfile(userId);
     if (!user) throw new NotFoundError("User not found");
 
-    const allowedStages = ["auth_complete", "personal_complete"] as const;
-    if (
-      !allowedStages.includes(
-        user.profileStage as (typeof allowedStages)[number],
-      )
-    ) {
-      throw new ForbiddenError(
-        "Please complete authentication before filling personal details",
-      );
-    }
-
-    await this.userRepository.updatePersonalDetails(userId, data);
+    const shouldAdvance = user.profileStage === "auth_complete";
+    await this.userRepository.updatePersonalDetails(
+      userId,
+      data,
+      shouldAdvance,
+    );
 
     return {
       message: "Personal details saved successfully",
-      profileStage: "personal_complete",
+      profileStage: shouldAdvance ? "personal_complete" : user.profileStage,
     };
+  }
+
+  async updateName(userId: string, fullName: string): Promise<void> {
+    await this.userRepository.updateName(userId, fullName);
   }
 
   async getAppState(userId: string) {

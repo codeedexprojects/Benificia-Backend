@@ -14,6 +14,10 @@ import { factFindingRoutes } from "./fact-finding.routes";
 import { healthRoutes } from "./health.routes";
 import { dashboardRoutes } from "./dashboard.routes";
 import { recommendationRoutes } from "./recommendation.routes";
+import { enquiryRoutes } from "./enquiry.routes";
+import { EnquiryRepository } from "../../modules/enquiry/enquiry.repository";
+import { EnquiryService } from "../../modules/enquiry/enquiry.service";
+import { EnquiryController } from "../../modules/enquiry/enquiry.controller";
 
 const router = Router();
 const { userController } = new UserContainer(prisma, redis, ses, s3);
@@ -34,5 +38,10 @@ router.use("/fact-finding", factFindingRoutes(factFindingController));
 router.use("/health-centres", healthRoutes(healthController));
 router.use("/dashboard", dashboardRoutes(dashboardController));
 router.use("/recommendations", recommendationRoutes(recommendationController));
+
+const enquiryController = new EnquiryController(
+  new EnquiryService(new EnquiryRepository(prisma)),
+);
+router.use("/contact", enquiryRoutes(enquiryController));
 
 export default router;
