@@ -5,6 +5,7 @@ import {
   adminVerifyOtpSchema,
   listUsersSchema,
   blockUserSchema,
+  updateContactSchema,
 } from "./admin.schema";
 import { sendSuccess } from "../../utils/response";
 import { verifyAdminRefreshToken } from "../../utils/jwt";
@@ -103,6 +104,17 @@ export class AdminController {
       userId,
       req.admin!.id,
       req.ip,
+    );
+    sendSuccess(res, result);
+  };
+
+  updateContact = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.params["id"] as string;
+    const { contacted, note } = updateContactSchema.parse(req.body);
+    const result = await this.adminService.updateContact(
+      userId,
+      contacted,
+      note,
     );
     sendSuccess(res, result);
   };

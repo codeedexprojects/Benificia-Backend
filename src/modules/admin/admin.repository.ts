@@ -147,16 +147,33 @@ export class AdminRepository {
     search?: string;
     isActive?: boolean;
     profileStage?: string;
+    incomplete?: boolean;
+    contacted?: boolean;
   }) {
     const where = {
       deletedAt: null,
       ...(params.search && {
-        email: { contains: params.search, mode: "insensitive" as const },
+        OR: [
+          { email: { contains: params.search, mode: "insensitive" as const } },
+          { phone: { contains: params.search, mode: "insensitive" as const } },
+          {
+            profile: {
+              fullName: {
+                contains: params.search,
+                mode: "insensitive" as const,
+              },
+            },
+          },
+        ],
       }),
       ...(params.isActive !== undefined && { isActive: params.isActive }),
       ...(params.profileStage && {
         profileStage: params.profileStage as never,
       }),
+      ...(params.incomplete === true && {
+        profileStage: { not: "recommendations_ready" as never },
+      }),
+      ...(params.contacted !== undefined && { isContacted: params.contacted }),
     };
 
     return Promise.all([
@@ -168,8 +185,12 @@ export class AdminRepository {
         select: {
           id: true,
           email: true,
+          phone: true,
           profileStage: true,
           isActive: true,
+          isContacted: true,
+          contactNote: true,
+          contactedAt: true,
           createdAt: true,
           profile: {
             select: { fullName: true, city: true, state: true },
@@ -186,8 +207,12 @@ export class AdminRepository {
       select: {
         id: true,
         email: true,
+        phone: true,
         profileStage: true,
         isActive: true,
+        isContacted: true,
+        contactNote: true,
+        contactedAt: true,
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
@@ -216,6 +241,7 @@ export class AdminRepository {
             status: true,
             callbackTime: true,
             notes: true,
+            metadata: true,
             createdAt: true,
             product: {
               select: {
@@ -245,6 +271,23 @@ export class AdminRepository {
       where: { id: userId },
       data: { isActive },
       select: { id: true, email: true, isActive: true },
+    });
+  }
+
+  updateContact(userId: string, contacted: boolean, note?: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isContacted: contacted,
+        contactNote: note ?? null,
+        contactedAt: contacted ? new Date() : null,
+      },
+      select: {
+        id: true,
+        isContacted: true,
+        contactNote: true,
+        contactedAt: true,
+      },
     });
   }
 

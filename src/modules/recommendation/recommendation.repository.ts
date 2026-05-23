@@ -129,4 +129,60 @@ export class RecommendationRepository {
       select: { id: true },
     });
   }
+
+  findProductByPlanId(planId: string) {
+    return this.prisma.insuranceProduct.findFirst({
+      where: {
+        OR: [{ id: planId }, { externalId: planId }],
+      },
+      select: { id: true, name: true, type: true, coverageAmount: true },
+    });
+  }
+
+  upsertProductFromAi(data: {
+    externalId: string;
+    name: string;
+    type: import("@prisma/client").InsuranceType;
+    coverageAmount?: number | null;
+  }) {
+    return this.prisma.insuranceProduct.upsert({
+      where: { externalId: data.externalId },
+      create: {
+        externalId: data.externalId,
+        name: data.name,
+        type: data.type,
+        coverageAmount: data.coverageAmount ?? null,
+        isActive: true,
+      },
+      update: {},
+      select: { id: true },
+    });
+  }
+
+  upsertInterest(
+    userId: string,
+    productId: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    return this.prisma.insuranceInterest.upsert({
+      where: {
+        userId_productId: { userId, productId },
+      },
+      create: {
+        userId,
+        productId,
+        status: "pending",
+        metadata: metadata as never,
+      },
+      update: { metadata: metadata as never },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        product: {
+          select: { id: true, name: true, type: true, coverageAmount: true },
+        },
+      },
+    });
+  }
 }

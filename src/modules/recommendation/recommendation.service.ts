@@ -6,6 +6,7 @@ import {
   type AiRecommendationResponse,
 } from "../../utils/ai-client";
 import { BadRequestError, NotFoundError } from "../../utils/errors";
+import type { InsuranceType } from "@prisma/client";
 
 const ALLOWED_STAGES = new Set([
   "fact_finding_complete",
@@ -156,6 +157,48 @@ export class RecommendationService {
     };
   }
 
+  // ── Express interest (Get Quotes) ─────────────────────────
+
+  async expressInterest(
+    userId: string,
+    planId: string,
+    planInfo: {
+      name: string;
+      category?: string;
+      coverageAmount?: number | null;
+      reasoning?: string;
+      matchTags?: string[];
+      planSnapshot?: Record<string, unknown>;
+    },
+  ) {
+    let product = await this.repo.findProductByPlanId(planId);
+
+    if (!product) {
+      const type = mapCategoryToType(planInfo.category ?? "");
+      const created = await this.repo.upsertProductFromAi({
+        externalId: planId,
+        name: planInfo.name,
+        type,
+        coverageAmount: planInfo.coverageAmount ?? null,
+      });
+      product = {
+        id: created.id,
+        name: planInfo.name,
+        type,
+        coverageAmount: planInfo.coverageAmount ?? null,
+      };
+    }
+
+    const metadata = {
+      category: planInfo.category,
+      reasoning: planInfo.reasoning,
+      matchTags: planInfo.matchTags,
+      ...(planInfo.planSnapshot ?? {}),
+    };
+
+    return this.repo.upsertInterest(userId, product.id, metadata);
+  }
+
   // ── Get latest ─────────────────────────────────────────────
 
   async getLatest(userId: string) {
@@ -210,4 +253,16 @@ function buildMeta(results: AiRecommendationResponse[]) {
     model: first.model,
     totalLatencyMs: results.reduce((sum, r) => sum + r.latency_ms, 0),
   };
+}
+
+function mapCategoryToType(category: string): InsuranceType {
+  const c = category.toLowerCase();
+  if (c.includes("health") || c.includes("medical") || c.includes("mediclaim"))
+    return "health";
+  if (c.includes("term") || c.includes("life")) return "term";
+  if (c.includes("ulip")) return "ulip";
+  if (c.includes("endowment")) return "endowment";
+  if (c.includes("vehicle") || c.includes("motor") || c.includes("car"))
+    return "vehicle";
+  return "term";
 }
