@@ -13,6 +13,7 @@ export function userRoutes(controller: UserController): Router {
   // Profile
   router.get("/me", controller.getProfile);
   router.patch("/personal", controller.updatePersonalDetails);
+  router.patch("/name", controller.updateName);
 
   // Profile photo
   router.post("/photo/upload-url", controller.requestPhotoUploadUrl);

@@ -252,10 +252,12 @@ export class UserRepository {
   updatePersonalDetails(
     userId: string,
     data: {
+      fullName?: string;
       gender?: "male" | "female" | "other" | "prefer_not_to_say";
       age: number;
       maritalStatus?: "single" | "married" | "divorced" | "widowed";
     },
+    advanceStage: boolean,
   ) {
     return this.prisma.$transaction([
       this.prisma.userProfile.upsert({
@@ -266,9 +268,18 @@ export class UserRepository {
       }),
       this.prisma.user.update({
         where: { id: userId },
-        data: { profileStage: "personal_complete" },
+        data: advanceStage ? { profileStage: "personal_complete" } : {},
         select: { profileStage: true },
       }),
     ]);
+  }
+
+  updateName(userId: string, fullName: string) {
+    return this.prisma.userProfile.upsert({
+      where: { userId },
+      create: { userId, fullName },
+      update: { fullName },
+      select: { userId: true },
+    });
   }
 }

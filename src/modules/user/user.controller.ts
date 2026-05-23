@@ -6,6 +6,7 @@ import {
   requestPhotoUploadSchema,
   confirmPhotoUploadSchema,
   personalDetailsSchema,
+  updateNameSchema,
 } from "./user.schema";
 import { sendSuccess } from "../../utils/response";
 import { verifyUserRefreshToken } from "../../utils/jwt";
@@ -155,6 +156,12 @@ export class UserController {
       body,
     );
     sendSuccess(res, result);
+  };
+
+  updateName = async (req: Request, res: Response): Promise<void> => {
+    const { fullName } = updateNameSchema.parse(req.body);
+    await this.userService.updateName(req.user!.id, fullName);
+    sendSuccess(res, { message: "Name updated successfully" });
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {

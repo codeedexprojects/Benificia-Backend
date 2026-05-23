@@ -112,3 +112,23 @@ model NotificationTemplate {
   @@index([isActive])
   @@map("notification_templates")
 }
+
+enum EnquiryStatus {
+  unread
+  read
+  resolved
+}
+
+model Enquiry {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String        @db.VarChar(255)
+  phone     String?       @db.VarChar(30)
+  message   String        @db.Text
+  status    EnquiryStatus @default(unread)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("enquiries")
+}

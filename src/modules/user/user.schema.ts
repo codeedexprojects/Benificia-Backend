@@ -65,9 +65,20 @@ export const confirmPhotoUploadSchema = z.object({
     .max(500, "File key is too long"),
 });
 
+// ── Name-only update (collected at login time) ────────────────
+
+export const updateNameSchema = z.object({
+  fullName: z.string().min(2, "Name must be at least 2 characters").max(100),
+});
+
 // ── About You (fact-finding step 0) ──────────────────────────
 
 export const personalDetailsSchema = z.object({
+  fullName: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(100)
+    .optional(),
   gender: z
     .enum(["male", "female", "other", "prefer_not_to_say"], {
       error: "Please select a valid gender",
