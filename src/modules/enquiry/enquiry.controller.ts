@@ -35,4 +35,9 @@ export class EnquiryController {
     const result = await this.service.getSummary();
     sendSuccess(res, result);
   };
+
+  getUnreadCount = async (_req: Request, res: Response): Promise<void> => {
+    const result = await this.service.getUnreadCount();
+    sendSuccess(res, result);
+  };
 }
