@@ -58,4 +58,8 @@ export class EnquiryRepository {
       _count: { _all: true },
     });
   }
+
+  countUnread() {
+    return this.prisma.enquiry.count({ where: { status: "unread" } });
+  }
 }

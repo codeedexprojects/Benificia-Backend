@@ -44,4 +44,9 @@ export class EnquiryService {
     for (const c of counts) summary[c.status] = c._count._all;
     return summary;
   }
+
+  async getUnreadCount() {
+    const count = await this.repo.countUnread();
+    return { unread: count };
+  }
 }
