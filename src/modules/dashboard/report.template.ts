@@ -23,6 +23,14 @@ const PAGE_MARGIN = 40;
 const INR = (n: number) =>
   "Rs." + Math.abs(Math.round(n)).toLocaleString("en-IN");
 
+// Compact formatter for summary cards — abbreviates large numbers to avoid overflow
+const INR_COMPACT = (n: number): string => {
+  const abs = Math.abs(Math.round(n));
+  if (abs >= 1_00_00_000) return `Rs.${(abs / 1_00_00_000).toFixed(2)} Cr`;
+  if (abs >= 1_00_000) return `Rs.${(abs / 1_00_000).toFixed(2)} L`;
+  return "Rs." + abs.toLocaleString("en-IN");
+};
+
 const PCT = (n: number) => `${n.toFixed(1)}%`;
 
 const fmt = (v: string | number | null | undefined, fallback = "—") =>
@@ -433,8 +441,8 @@ export async function buildFinancialReport(data: ReportData): Promise<Buffer> {
       cardW,
       cardH,
       "Monthly Income",
-      INR(monthlyIncome),
-      `Annual: ${INR(monthlyIncome * 12)}`,
+      INR_COMPACT(monthlyIncome),
+      `Annual: ${INR_COMPACT(monthlyIncome * 12)}`,
       C.green,
     );
 
@@ -445,7 +453,7 @@ export async function buildFinancialReport(data: ReportData): Promise<Buffer> {
       cardW,
       cardH,
       "Net Worth",
-      INR(netWorth),
+      INR_COMPACT(netWorth),
       netWorth >= 0 ? "Assets − Liabilities" : "Deficit",
       netWorth >= 0 ? C.green : C.red,
     );
@@ -457,7 +465,7 @@ export async function buildFinancialReport(data: ReportData): Promise<Buffer> {
       cardW,
       cardH,
       "Monthly Surplus",
-      (surplus >= 0 ? "+" : "-") + INR(surplus),
+      (surplus >= 0 ? "+" : "-") + INR_COMPACT(surplus),
       surplus >= 0
         ? `Savings: ${PCT(data.finance?.savingsRatioPct ?? 0)}`
         : "Deficit",
