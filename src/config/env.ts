@@ -15,6 +15,7 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(5000),
+  DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 
   REDIS_URL: z.string().min(1),
 

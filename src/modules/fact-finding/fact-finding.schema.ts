@@ -18,7 +18,7 @@ export const incomeSchema = z
       )
       .min(1, "Please select at least one income source"),
 
-    // Income amounts (max ~10 crore/month)
+    // Income amounts — must already be monthly (frontend converts yearly÷12 before sending)
     salaryMonthly: z
       .number({ error: "Salary must be a number" })
       .min(0)
@@ -39,6 +39,12 @@ export const incomeSchema = z
       .min(0)
       .max(100_000_000)
       .default(0),
+
+    // Period metadata — stored so the frontend can restore the original toggle state
+    salaryPeriod: z.enum(["monthly", "yearly"]).default("monthly"),
+    freelancePeriod: z.enum(["monthly", "yearly"]).default("monthly"),
+    businessPeriod: z.enum(["monthly", "yearly"]).default("monthly"),
+    otherPeriod: z.enum(["monthly", "yearly"]).default("monthly"),
 
     // Assets (max ~100 crore)
     residentialProperty: z

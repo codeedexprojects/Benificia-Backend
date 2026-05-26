@@ -1,17 +1,38 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { createClient } from "redis";
 import { SESClient } from "@aws-sdk/client-ses";
 import { S3Client } from "@aws-sdk/client-s3";
 import { env } from "./config/env";
 import { logger } from "./utils/logger";
 
-const adapter = new PrismaPg({
+const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: env.DB_POOL_MAX,
   idleTimeoutMillis: env.DB_POOL_IDLE_TIMEOUT_MS,
   connectionTimeoutMillis: env.DB_POOL_CONNECTION_TIMEOUT_MS,
+  // Detect silently-dropped connections through cloud firewalls/NAT.
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
+
+// Set statement_timeout on every new physical connection so slow queries
+// fail fast rather than hanging until the process-level timeout fires.
+pool.on("connect", (client) => {
+  client
+    .query(`SET statement_timeout = ${env.DB_STATEMENT_TIMEOUT_MS}`)
+    .catch((err: Error) =>
+      logger.error("Failed to set statement_timeout", { message: err.message }),
+    );
+});
+
+pool.on("error", (err: Error) =>
+  logger.error("Idle pool client error", { message: err.message }),
+);
+
+// disposeExternalPool: true — ensures pool.end() is called when prisma.$disconnect() runs.
+const adapter = new PrismaPg(pool, { disposeExternalPool: true });
 
 export const prisma = new PrismaClient({
   adapter,

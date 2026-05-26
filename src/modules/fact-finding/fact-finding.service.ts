@@ -307,16 +307,72 @@ export class FactFindingService {
 
   async getStatus(userId: string) {
     const data = await this.repo.findAllFactFindingData(userId);
+
+    const inc = data.income;
+    const toDisplay = (monthly: number, period: string) =>
+      period === "yearly" ? monthly * 12 : monthly;
+
+    const income = inc
+      ? {
+          sources: inc.incomeSources ?? [],
+          totalMonthly: inc.totalMonthly ?? 0,
+          salary: {
+            amount: toDisplay(
+              inc.salaryMonthly ?? 0,
+              inc.salaryPeriod ?? "monthly",
+            ),
+            period: inc.salaryPeriod ?? "monthly",
+            monthly: inc.salaryMonthly ?? 0,
+          },
+          freelance: {
+            amount: toDisplay(
+              inc.freelanceMonthly ?? 0,
+              inc.freelancePeriod ?? "monthly",
+            ),
+            period: inc.freelancePeriod ?? "monthly",
+            monthly: inc.freelanceMonthly ?? 0,
+          },
+          business: {
+            amount: toDisplay(
+              inc.businessMonthly ?? 0,
+              inc.businessPeriod ?? "monthly",
+            ),
+            period: inc.businessPeriod ?? "monthly",
+            monthly: inc.businessMonthly ?? 0,
+          },
+          other: {
+            amount: toDisplay(
+              inc.otherMonthly ?? 0,
+              inc.otherPeriod ?? "monthly",
+            ),
+            period: inc.otherPeriod ?? "monthly",
+            monthly: inc.otherMonthly ?? 0,
+          },
+        }
+      : null;
+
+    const assets = inc
+      ? {
+          residentialProperty: inc.residentialProperty ?? 0,
+          investment: inc.investment ?? 0,
+          savingsBank: inc.savingsBank ?? 0,
+          goldJewelry: inc.goldJewelry ?? 0,
+          retirementFunds: inc.retirementFunds ?? 0,
+          otherAssets: inc.otherAssets ?? 0,
+          total: inc.totalAssets ?? 0,
+        }
+      : null;
+
     return {
       currentStage: data.profileStage,
       completion: data.profileStage
         ? getCompletionStatus(asStage(data.profileStage))
         : null,
       savedData: {
-        income: data.income,
+        income,
+        assets,
         financeProfile: data.financeProfile,
         goals: data.goals,
-        assets: data.assets,
         risk: data.risk,
       },
     };
