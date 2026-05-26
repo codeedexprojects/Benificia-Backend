@@ -19,9 +19,18 @@ async function bootstrap(): Promise<void> {
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info(`${signal} received — shutting down gracefully`);
+
+    // Force-exit if graceful shutdown takes longer than 15 s (stuck requests).
+    const forceExit = setTimeout(() => {
+      logger.error("Shutdown timed out — forcing exit");
+      process.exit(1);
+    }, 15_000);
+    forceExit.unref(); // don't let this timer keep the event loop alive on its own
+
     server.close(async () => {
-      await prisma.$disconnect();
-      await redis.disconnect();
+      await prisma.$disconnect(); // also drains pg pool via disposeExternalPool
+      await redis.quit();
+      clearTimeout(forceExit);
       logger.info("Shutdown complete");
       process.exit(0);
     });

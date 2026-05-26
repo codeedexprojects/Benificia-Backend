@@ -70,12 +70,18 @@ model IncomeProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @unique @map("user_id") @db.Uuid
 
-  // Amounts — monthly
-  salaryMonthly    Float @default(0) @map("salary_monthly")
-  freelanceMonthly Float @default(0) @map("freelance_monthly")
-  businessMonthly  Float @default(0) @map("business_monthly")
-  otherMonthly     Float @default(0) @map("other_monthly")
-  totalMonthly     Float @default(0) @map("total_monthly")
+  // Amounts — always stored as monthly regardless of how the user entered them
+  salaryMonthly    Float  @default(0)          @map("salary_monthly")
+  freelanceMonthly Float  @default(0)          @map("freelance_monthly")
+  businessMonthly  Float  @default(0)          @map("business_monthly")
+  otherMonthly     Float  @default(0)          @map("other_monthly")
+  totalMonthly     Float  @default(0)          @map("total_monthly")
+
+  // Period metadata — the unit the user originally chose (monthly | yearly)
+  salaryPeriod    String @default("monthly")   @map("salary_period")
+  freelancePeriod String @default("monthly")   @map("freelance_period")
+  businessPeriod  String @default("monthly")   @map("business_period")
+  otherPeriod     String @default("monthly")   @map("other_period")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
