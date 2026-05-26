@@ -61,7 +61,7 @@ export function signAdminAccessToken(
 ): string {
   return sign(
     { ...payload, type: "admin_access" },
-    env.JWT_SECRET,
+    env.ADMIN_JWT_SECRET,
     env.JWT_EXPIRES_IN,
   );
 }
@@ -71,20 +71,23 @@ export function signAdminRefreshToken(
 ): string {
   return sign(
     { ...payload, type: "admin_refresh" },
-    env.JWT_REFRESH_SECRET,
+    env.ADMIN_JWT_REFRESH_SECRET,
     env.JWT_REFRESH_EXPIRES_IN,
   );
 }
 
 export function verifyAdminAccessToken(token: string): AdminAccessPayload {
-  const payload = verify<AdminAccessPayload>(token, env.JWT_SECRET);
+  const payload = verify<AdminAccessPayload>(token, env.ADMIN_JWT_SECRET);
   if (payload.type !== "admin_access")
     throw new UnauthorizedError("Invalid token type");
   return payload;
 }
 
 export function verifyAdminRefreshToken(token: string): AdminRefreshPayload {
-  const payload = verify<AdminRefreshPayload>(token, env.JWT_REFRESH_SECRET);
+  const payload = verify<AdminRefreshPayload>(
+    token,
+    env.ADMIN_JWT_REFRESH_SECRET,
+  );
   if (payload.type !== "admin_refresh")
     throw new UnauthorizedError("Invalid token type");
   return payload;

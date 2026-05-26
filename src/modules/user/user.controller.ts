@@ -59,7 +59,7 @@ export class UserController {
         maxAge: REFRESH_MAX_AGE,
       });
 
-    // Mobile: tokens also in response body
+    // Mobile: access token in response body for Bearer auth (refresh via cookie only)
     sendSuccess(
       res,
       {
@@ -73,7 +73,6 @@ export class UserController {
         },
         isNewUser: user.isNewUser,
         accessToken,
-        refreshToken,
       },
       user.isNewUser ? 201 : 200,
     );

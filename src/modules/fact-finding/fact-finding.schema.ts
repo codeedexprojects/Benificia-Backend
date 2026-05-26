@@ -18,48 +18,58 @@ export const incomeSchema = z
       )
       .min(1, "Please select at least one income source"),
 
-    // Income amounts
+    // Income amounts (max ~10 crore/month)
     salaryMonthly: z
       .number({ error: "Salary must be a number" })
       .min(0)
+      .max(100_000_000)
       .default(0),
     freelanceMonthly: z
       .number({ error: "Freelance income must be a number" })
       .min(0)
+      .max(100_000_000)
       .default(0),
     businessMonthly: z
       .number({ error: "Business income must be a number" })
       .min(0)
+      .max(100_000_000)
       .default(0),
     otherMonthly: z
       .number({ error: "Other income must be a number" })
       .min(0)
+      .max(100_000_000)
       .default(0),
 
-    // Assets
+    // Assets (max ~100 crore)
     residentialProperty: z
       .number({ error: "Residential property must be a number" })
       .min(0)
+      .max(1_000_000_000)
       .default(0),
     investment: z
       .number({ error: "Investment must be a number" })
       .min(0)
+      .max(1_000_000_000)
       .default(0),
     savingsBank: z
       .number({ error: "Savings must be a number" })
       .min(0)
+      .max(1_000_000_000)
       .default(0),
     goldJewelry: z
       .number({ error: "Gold and jewelry must be a number" })
       .min(0)
+      .max(1_000_000_000)
       .default(0),
     retirementFunds: z
       .number({ error: "Retirement funds must be a number" })
       .min(0)
+      .max(1_000_000_000)
       .default(0),
     otherAssets: z
       .number({ error: "Other assets must be a number" })
       .min(0)
+      .max(1_000_000_000)
       .default(0),
   })
   .refine(
@@ -72,10 +82,11 @@ export const incomeSchema = z
     { message: "Please enter at least one income amount" },
   );
 
-const optionalAmount = (label: string) =>
+const optionalAmount = (label: string, max = 100_000_000) =>
   z
     .number({ error: `${label} must be a number` })
     .min(0, `${label} cannot be negative`)
+    .max(max, `${label} exceeds maximum allowed value`)
     .default(0);
 
 export const financeProfileSchema = z.object({

@@ -1,10 +1,12 @@
 import { Router } from "express";
+import type { Request, Response } from "express";
 import { prisma, redis, ses } from "../../container";
 import { AdminContainer } from "../../modules/admin/admin.container";
 import { HealthContainer } from "../../modules/health/health.container";
 import { AiAdminController } from "../../modules/ai-admin/ai-admin.controller";
 import { authRateLimit } from "../../middleware/rateLimit.middleware";
 import { requireAdmin } from "../../middleware/admin.middleware";
+import { generateCsrfToken } from "../../middleware/csrf.middleware";
 import { adminHealthRoutes } from "./health.routes";
 import { usersRoutes } from "./users.routes";
 import { aiAdminRoutes } from "./ai.routes";
@@ -20,6 +22,11 @@ const aiAdminController = new AiAdminController();
 const enquiryController = new EnquiryController(
   new EnquiryService(new EnquiryRepository(prisma)),
 );
+
+router.get("/auth/csrf-token", (req: Request, res: Response) => {
+  const token = generateCsrfToken(req, res);
+  res.json({ success: true, data: { token } });
+});
 
 router.post("/auth/login", authRateLimit, adminController.login);
 router.post("/auth/verify-otp", authRateLimit, adminController.verifyOtp);
