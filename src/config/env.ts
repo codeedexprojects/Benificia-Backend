@@ -20,9 +20,12 @@ const envSchema = z.object({
 
   JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  ADMIN_JWT_SECRET: z.string().min(32),
+  ADMIN_JWT_REFRESH_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default("2h"),
   JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
+  CSRF_SECRET: z.string().min(32),
   ENCRYPTION_KEY: z.string().min(32),
 
   AWS_REGION: z.string().min(1),

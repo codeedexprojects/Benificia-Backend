@@ -291,11 +291,8 @@ export class AdminService {
   }
 
   async logout(adminId: string, sessionId: string): Promise<void> {
-    // Both must complete independently — DB is the authoritative revocation
-    await Promise.allSettled([
-      this.adminRepository.revokeSession(sessionId),
-      this.redis.del(ADMIN_SESSION_KEY(adminId, sessionId)),
-    ]);
+    await this.adminRepository.revokeSession(sessionId);
+    await this.redis.del(ADMIN_SESSION_KEY(adminId, sessionId)).catch(() => {});
   }
 
   async getDashboardStats() {

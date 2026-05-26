@@ -599,10 +599,8 @@ export class UserService {
   }
 
   async logout(userId: string, sessionId: string): Promise<void> {
-    await Promise.allSettled([
-      this.userRepository.revokeSession(sessionId),
-      this.redis.del(USER_SESSION_KEY(userId, sessionId)),
-    ]);
+    await this.userRepository.revokeSession(sessionId);
+    await this.redis.del(USER_SESSION_KEY(userId, sessionId)).catch(() => {});
   }
 
   private async issueTokens(

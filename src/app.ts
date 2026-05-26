@@ -4,6 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { globalRateLimit } from "./middleware/rateLimit.middleware";
+import { doubleCsrfProtection } from "./middleware/csrf.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { requestLogger } from "./middleware/requestLogger.middleware";
 import userRoutes from "./routes/user";
@@ -28,6 +29,7 @@ app.use(cookieParser());
 
 app.use(globalRateLimit);
 app.use(requestLogger);
+app.use(doubleCsrfProtection);
 
 app.set("trust proxy", 1);
 
