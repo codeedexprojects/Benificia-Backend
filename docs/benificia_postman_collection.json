@@ -9,26 +9,38 @@
       "name": "User APIs",
       "item": [
         {
-          "name": "Auth — Email",
+          "name": "Auth",
           "item": [
             {
-              "name": "Send Email OTP",
+              "name": "Get CSRF Token",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/csrf-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "csrf-token"]
+                }
+              }
+            },
+            {
+              "name": "Send OTP",
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"user@example.com\"\n}"
+                  "raw": "{\n  \"identifier\": \"user@example.com\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/auth/email/send-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/otp/send",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "auth", "email", "send-otp"]
-                }
+                  "path": ["api", "v1", "auth", "otp", "send"]
+                },
+                "description": "Accepts email or E.164 phone number — channel is auto-detected."
               }
             },
             {
-              "name": "Verify Email OTP",
+              "name": "Verify OTP",
               "event": [
                 {
                   "listen": "test",
@@ -47,13 +59,14 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
+                  "raw": "{\n  \"identifier\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/auth/email/verify-otp",
+                  "raw": "{{baseUrl}}/api/v1/auth/otp/verify",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "auth", "email", "verify-otp"]
-                }
+                  "path": ["api", "v1", "auth", "otp", "verify"]
+                },
+                "description": "Accepts email or E.164 phone number — channel is auto-detected."
               }
             },
             {
@@ -81,58 +94,20 @@
           ]
         },
         {
-          "name": "Auth — Phone",
-          "item": [
-            {
-              "name": "Send Phone OTP",
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+919876543210\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/auth/phone/send-otp",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "auth", "phone", "send-otp"]
-                }
-              }
-            },
-            {
-              "name": "Verify Phone OTP",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test(\"Status 200 or 201\", function () {",
-                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                      "});"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"phone\": \"+919876543210\",\n  \"otp\": \"123456\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/auth/phone/verify-otp",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "auth", "phone", "verify-otp"]
-                }
-              }
-            }
-          ]
-        },
-        {
           "name": "Profile",
           "item": [
+            {
+              "name": "Get App State",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/profile/app-state",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "profile", "app-state"]
+                },
+                "description": "Returns routing state — call on every app open after login."
+              }
+            },
             {
               "name": "Get My Profile",
               "request": {
@@ -145,13 +120,30 @@
               }
             },
             {
+              "name": "Update Name",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"fullName\": \"John Doe\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/profile/name",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "profile", "name"]
+                },
+                "description": "Update name only — used at login time."
+              }
+            },
+            {
               "name": "Update Personal Details",
               "request": {
                 "method": "PATCH",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"maritalStatus\": \"single\",\n  \"numberOfDependents\": 0,\n  \"childrenAges\": [],\n  \"occupation\": \"Software Engineer\",\n  \"employer\": \"Tech Corp\",\n  \"incomeType\": \"fixed\",\n  \"retirementAge\": 60,\n  \"isPrimaryEarner\": true,\n  \"dependentsRelyOnIncome\": true\n}"
+                  "raw": "{\n  \"fullName\": \"John Doe\",\n  \"gender\": \"male\",\n  \"age\": 30,\n  \"maritalStatus\": \"single\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/profile/personal",
@@ -209,51 +201,49 @@
           "name": "Fact Finding",
           "item": [
             {
+              "name": "Get Status",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "fact-finding", "status"]
+                },
+                "description": "Returns current stage and all saved answers for pre-filling Previous/Edit screens."
+              }
+            },
+            {
               "name": "Save Income",
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"salaryMonthly\": 80000,\n  \"businessMonthly\": 0,\n  \"passiveMonthly\": 5000,\n  \"otherMonthly\": 0,\n  \"annualBonus\": 100000,\n  \"expectedGrowthPct\": 8\n}"
+                  "raw": "{\n  \"incomeSources\": [\"full_time_salary\"],\n  \"salaryMonthly\": 80000,\n  \"freelanceMonthly\": 0,\n  \"businessMonthly\": 0,\n  \"otherMonthly\": 5000,\n  \"salaryPeriod\": \"monthly\",\n  \"freelancePeriod\": \"monthly\",\n  \"businessPeriod\": \"monthly\",\n  \"otherPeriod\": \"monthly\",\n  \"residentialProperty\": 0,\n  \"investment\": 150000,\n  \"savingsBank\": 200000,\n  \"goldJewelry\": 100000,\n  \"retirementFunds\": 250000,\n  \"otherAssets\": 0\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/fact-finding/income",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "fact-finding", "income"]
-                }
+                },
+                "description": "Finance step 1: income sources, amounts (monthly), and assets. All amounts must already be monthly (frontend converts yearly÷12 before sending)."
               }
             },
             {
-              "name": "Save Expenses",
+              "name": "Save Finance Profile",
               "request": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"rentOrHomeLoanEmi\": 15000,\n  \"vehicleLoanEmi\": 5000,\n  \"otherLoanEmis\": 0,\n  \"existingPremiums\": 2000,\n  \"groceriesFood\": 8000,\n  \"utilities\": 3000,\n  \"transport\": 4000,\n  \"medicalHealthcare\": 1000,\n  \"diningEntertainment\": 3000,\n  \"shopping\": 2000,\n  \"childrenEducation\": 0,\n  \"otherExpenses\": 2000\n}"
+                  "raw": "{\n  \"frequency\": \"monthly\",\n  \"numberOfDependents\": 2,\n  \"householdExpenses\": 15000,\n  \"rentAndEmi\": 20000,\n  \"educationExpenses\": 5000,\n  \"otherExpenses\": 3000,\n  \"insuranceMonthly\": 2000,\n  \"creditCardDues\": 0,\n  \"personalLoan\": 0,\n  \"medicalExpenses\": 1000,\n  \"otherShortTermExpenses\": 0,\n  \"homeLoan\": 1200000,\n  \"vehicleLoan\": 400000,\n  \"educationLoan\": 0,\n  \"businessLoan\": 0,\n  \"otherLongTermExpenses\": 0\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/fact-finding/expenses",
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/finance-profile",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "fact-finding", "expenses"]
-                }
-              }
-            },
-            {
-              "name": "Save Assets & Liabilities",
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"cashSavings\": 200000,\n  \"fixedDeposits\": 300000,\n  \"mutualFundsStocks\": 150000,\n  \"goldValue\": 100000,\n  \"realEstateValue\": 0,\n  \"epfPpfBalance\": 250000,\n  \"otherAssets\": 0,\n  \"homeLoanOutstanding\": 1200000,\n  \"vehicleLoanOutstanding\": 400000,\n  \"personalLoanOutstanding\": 0,\n  \"creditCardOutstanding\": 0,\n  \"otherLoans\": 0,\n  \"existingLifeCover\": 2500000,\n  \"existingHealthCover\": 500000\n}"
+                  "path": ["api", "v1", "fact-finding", "finance-profile"]
                 },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/fact-finding/assets",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "fact-finding", "assets"]
-                }
+                "description": "Finance step 2: dependents, spend breakdown, insurance, and liabilities."
               }
             },
             {
@@ -263,13 +253,14 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"goals\": [\n    {\n      \"type\": \"retirement\",\n      \"targetAmount\": 10000000,\n      \"targetYears\": 25,\n      \"currentSaved\": 250000,\n      \"priority\": 1\n    },\n    {\n      \"type\": \"emergency_fund\",\n      \"targetAmount\": 300000,\n      \"targetYears\": 2,\n      \"currentSaved\": 200000,\n      \"priority\": 2\n    }\n  ]\n}"
+                  "raw": "{\n  \"financialAims\": [\"retirement\", \"wealth_building\"],\n  \"timeHorizon\": \"long_7_plus\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/fact-finding/goals",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "fact-finding", "goals"]
-                }
+                },
+                "description": "Finance step 3: financial aims and time horizon. financialAims values: retirement, home_ownership, education, wealth_building, repay_debts, other. timeHorizon values: short_1_3, medium_3_7, long_7_plus."
               }
             },
             {
@@ -279,13 +270,26 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"answers\": [2, 3, 2, 3, 2]\n}"
+                  "raw": "{\n  \"portfolioDrop\": \"wait_it_out\",\n  \"investmentStyle\": \"moderate\",\n  \"marketFeeling\": \"neutral\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/fact-finding/risk",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "fact-finding", "risk"]
-                }
+                },
+                "description": "portfolioDrop: sell_everything | wait_it_out | buy_more. investmentStyle: conservative | moderate | aggressive. marketFeeling: very_anxious | neutral | excited."
+              }
+            },
+            {
+              "name": "Skip Risk Profile",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/fact-finding/risk/skip",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "fact-finding", "risk", "skip"]
+                },
+                "description": "Skip the risk assessment step (optional step)."
               }
             }
           ]
@@ -358,6 +362,17 @@
                   "path": ["api", "v1", "dashboard", "risk-profile"]
                 }
               }
+            },
+            {
+              "name": "Download Report",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/dashboard/report",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "dashboard", "report"]
+                }
+              }
             }
           ]
         },
@@ -385,6 +400,23 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "recommendations", "latest"]
                 }
+              }
+            },
+            {
+              "name": "Express Interest in Plan",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"planId\": \"plan_abc123\",\n  \"planName\": \"Term Life Plan\",\n  \"category\": \"life\",\n  \"coverageAmount\": 5000000,\n  \"reasoning\": \"Best match for your income replacement needs\",\n  \"matchTags\": [\"term_life\", \"high_cover\"],\n  \"planSnapshot\": {}\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/recommendations/interest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "recommendations", "interest"]
+                },
+                "description": "Record user interest in a recommended plan."
               }
             }
           ]
@@ -452,12 +484,58 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"filename\": \"document.pdf\",\n  \"contentType\": \"application/pdf\"\n}"
+                  "raw": "{\n  \"category\": \"kyc_document\",\n  \"contentType\": \"application/pdf\",\n  \"docType\": \"pan_card\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/upload/url",
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "upload", "url"]
+                },
+                "description": "category: profile_photo | kyc_document. contentType: image/jpeg | image/png | image/webp | application/pdf. docType required when category is kyc_document."
+              }
+            },
+            {
+              "name": "Get Download URL",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/upload/url?key={{fileKey}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "upload", "url"],
+                  "query": [{ "key": "key", "value": "{{fileKey}}" }]
+                }
+              }
+            },
+            {
+              "name": "Delete File",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/upload/url?key={{fileKey}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "upload", "url"],
+                  "query": [{ "key": "key", "value": "{{fileKey}}" }]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Contact / Enquiry",
+          "item": [
+            {
+              "name": "Submit Enquiry",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"phone\": \"+919876543210\",\n  \"message\": \"I would like to know more about the plans available for my profile.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/contact",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "contact"]
                 }
               }
             }
@@ -471,6 +549,17 @@
         {
           "name": "Auth",
           "item": [
+            {
+              "name": "Get CSRF Token",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/auth/csrf-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "auth", "csrf-token"]
+                }
+              }
+            },
             {
               "name": "Admin Login",
               "request": {
@@ -552,6 +641,22 @@
           ]
         },
         {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Get Dashboard Stats",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/dashboard/stats",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "dashboard", "stats"]
+                }
+              }
+            }
+          ]
+        },
+        {
           "name": "User Management",
           "item": [
             {
@@ -608,6 +713,85 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["api", "v1", "admin", "users", "{{userId}}", "unblock"]
                 }
+              }
+            },
+            {
+              "name": "Update User Contact",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contacted\": true,\n  \"note\": \"Called user, interested in term life plan.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/users/{{userId}}/contact",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "users", "{{userId}}", "contact"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enquiries",
+          "item": [
+            {
+              "name": "List Enquiries",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/enquiries?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "enquiries"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "status", "value": "", "disabled": true },
+                    { "key": "from", "value": "", "disabled": true },
+                    { "key": "to", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "status filter: unread | read | resolved"
+              }
+            },
+            {
+              "name": "Get Enquiries Summary",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/enquiries/summary",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "enquiries", "summary"]
+                }
+              }
+            },
+            {
+              "name": "Get Unread Count",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/enquiries/unread-count",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "enquiries", "unread-count"]
+                }
+              }
+            },
+            {
+              "name": "Update Enquiry Status",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"read\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/enquiries/{{enquiryId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "enquiries", "{{enquiryId}}", "status"]
+                },
+                "description": "status: unread | read | resolved"
               }
             }
           ]
@@ -705,6 +889,336 @@
               }
             }
           ]
+        },
+        {
+          "name": "AI — Plans",
+          "item": [
+            {
+              "name": "List Plans (Public)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans"]
+                }
+              }
+            },
+            {
+              "name": "List Plans (Admin All)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans-all",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans-all"]
+                }
+              }
+            },
+            {
+              "name": "Get Plan by Slug",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/slug/{{planSlug}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "slug", "{{planSlug}}"]
+                }
+              }
+            },
+            {
+              "name": "Get Plan by ID",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/{{planId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "{{planId}}"]
+                }
+              }
+            },
+            {
+              "name": "Update Plan",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Plan Name\",\n  \"description\": \"Updated description\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/{{planId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "{{planId}}"]
+                }
+              }
+            },
+            {
+              "name": "Delete Plan",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/{{planId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "{{planId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "AI — Plan Query Queue",
+          "item": [
+            {
+              "name": "Query Plans from LLM",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"Find term life insurance plans with sum assured above 1 crore\",\n  \"provider\": \"hdfc_life\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/query",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "query"]
+                }
+              }
+            },
+            {
+              "name": "List Query Queue",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/query-queue",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "query-queue"]
+                }
+              }
+            },
+            {
+              "name": "View Pending Query",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/query/{{queueId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "query", "{{queueId}}"]
+                }
+              }
+            },
+            {
+              "name": "Approve Plans",
+              "request": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/query/{{queueId}}/approve",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "query", "{{queueId}}", "approve"]
+                }
+              }
+            },
+            {
+              "name": "Reject Plans",
+              "request": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/plans/query/{{queueId}}/reject",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "plans", "query", "{{queueId}}", "reject"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "AI — Providers & Verticals",
+          "item": [
+            {
+              "name": "List Providers",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/providers",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "providers"]
+                }
+              }
+            },
+            {
+              "name": "List Verticals",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/verticals",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "verticals"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "AI — Recommendation Logs",
+          "item": [
+            {
+              "name": "List Recommendation Logs",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/recommendation-logs",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "recommendation-logs"]
+                }
+              }
+            },
+            {
+              "name": "Get Recommendation Log by Request ID",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/recommendation-logs/{{requestId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "recommendation-logs", "{{requestId}}"]
+                }
+              }
+            },
+            {
+              "name": "List Recommendation Logs (Admin)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/recommendation-logs-admin",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "recommendation-logs-admin"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "AI — Analytics",
+          "item": [
+            {
+              "name": "Top Plans",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/analytics/top-plans",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "analytics", "top-plans"]
+                }
+              }
+            },
+            {
+              "name": "Success Rate",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/analytics/success-rate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "analytics", "success-rate"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "AI — Prompt Templates",
+          "item": [
+            {
+              "name": "Get Templates Metadata",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/templates/metadata",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "templates", "metadata"]
+                }
+              }
+            },
+            {
+              "name": "List Prompts",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/prompts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "prompts"]
+                }
+              }
+            },
+            {
+              "name": "Create Prompt",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"template_name\": \"life_insurance_v2\",\n  \"template_text\": \"You are a financial advisor...\",\n  \"vertical\": \"life\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/prompts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "prompts"]
+                }
+              }
+            },
+            {
+              "name": "Activate Prompt",
+              "request": {
+                "method": "PATCH",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/prompts/{{templateId}}/activate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "prompts", "{{templateId}}", "activate"]
+                }
+              }
+            },
+            {
+              "name": "Update Prompt",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"template_text\": \"Updated prompt text...\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/prompts/{{templateId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "prompts", "{{templateId}}"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "AI — Audit & Health",
+          "item": [
+            {
+              "name": "List Audit Logs",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/audit-logs",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "audit-logs"]
+                }
+              }
+            },
+            {
+              "name": "AI Health Check",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/ai/ai-health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "admin", "ai", "ai-health"]
+                }
+              }
+            }
+          ]
         }
       ]
     }
@@ -712,6 +1226,13 @@
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3000" },
     { "key": "userId", "value": "" },
-    { "key": "healthCentreId", "value": "" }
+    { "key": "healthCentreId", "value": "" },
+    { "key": "enquiryId", "value": "" },
+    { "key": "planId", "value": "" },
+    { "key": "planSlug", "value": "" },
+    { "key": "queueId", "value": "" },
+    { "key": "templateId", "value": "" },
+    { "key": "requestId", "value": "" },
+    { "key": "fileKey", "value": "" }
   ]
 }
