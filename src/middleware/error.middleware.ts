@@ -36,6 +36,12 @@ export function errorMiddleware(
     return;
   }
 
+  // CSRF failure from csrf-csrf — return 403 so the client can retry with a fresh token
+  if (err instanceof Error && err.message === "invalid csrf token") {
+    res.status(403).json({ success: false, message: "Invalid CSRF token" });
+    return;
+  }
+
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2002") {
       res

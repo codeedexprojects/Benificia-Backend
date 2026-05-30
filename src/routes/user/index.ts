@@ -15,9 +15,13 @@ import { healthRoutes } from "./health.routes";
 import { dashboardRoutes } from "./dashboard.routes";
 import { recommendationRoutes } from "./recommendation.routes";
 import { enquiryRoutes } from "./enquiry.routes";
+import { expertRequestRoutes } from "./expert-request.routes";
 import { EnquiryRepository } from "../../modules/enquiry/enquiry.repository";
 import { EnquiryService } from "../../modules/enquiry/enquiry.service";
 import { EnquiryController } from "../../modules/enquiry/enquiry.controller";
+import { ExpertRequestRepository } from "../../modules/expert-request/expert-request.repository";
+import { ExpertRequestService } from "../../modules/expert-request/expert-request.service";
+import { ExpertRequestController } from "../../modules/expert-request/expert-request.controller";
 
 const router = Router();
 const { userController } = new UserContainer(prisma, redis, ses, s3);
@@ -43,5 +47,10 @@ const enquiryController = new EnquiryController(
   new EnquiryService(new EnquiryRepository(prisma)),
 );
 router.use("/contact", enquiryRoutes(enquiryController));
+
+const expertRequestController = new ExpertRequestController(
+  new ExpertRequestService(new ExpertRequestRepository(prisma)),
+);
+router.use("/expert-request", expertRequestRoutes(expertRequestController));
 
 export default router;

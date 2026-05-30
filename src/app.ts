@@ -19,7 +19,7 @@ app.use(
     origin: env.CORS_ORIGINS.split(",").map((o) => o.trim()),
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
   }),
 );
 
