@@ -14,8 +14,11 @@ const envSchema = z.object({
     .number()
     .int()
     .positive()
-    .default(5000),
+    .default(30000),
   DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  // Socket-level inactivity timeout — fires faster than the OS TCP retransmit
+  // timeout (~19 s) to detect silently-dropped connections (NAT/firewall).
+  DB_SOCKET_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
 
   REDIS_URL: z.string().min(1),
 
