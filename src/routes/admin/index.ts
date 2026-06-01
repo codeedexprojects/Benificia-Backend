@@ -14,6 +14,10 @@ import { adminEnquiryRoutes } from "./enquiry.routes";
 import { EnquiryRepository } from "../../modules/enquiry/enquiry.repository";
 import { EnquiryService } from "../../modules/enquiry/enquiry.service";
 import { EnquiryController } from "../../modules/enquiry/enquiry.controller";
+import { adminExpertRequestRoutes } from "./expert-request.routes";
+import { ExpertRequestRepository } from "../../modules/expert-request/expert-request.repository";
+import { ExpertRequestService } from "../../modules/expert-request/expert-request.service";
+import { ExpertRequestController } from "../../modules/expert-request/expert-request.controller";
 
 const router = Router();
 const { adminController } = new AdminContainer(prisma, redis, ses);
@@ -21,6 +25,9 @@ const { healthController } = new HealthContainer(prisma);
 const aiAdminController = new AiAdminController();
 const enquiryController = new EnquiryController(
   new EnquiryService(new EnquiryRepository(prisma)),
+);
+const expertRequestController = new ExpertRequestController(
+  new ExpertRequestService(new ExpertRequestRepository(prisma)),
 );
 
 router.get("/auth/csrf-token", (req: Request, res: Response) => {
@@ -46,6 +53,11 @@ router.get("/auth/me", requireAdmin, adminController.getMe);
 
 // Enquiries
 router.use("/enquiries", requireAdmin, adminEnquiryRoutes(enquiryController));
+router.use(
+  "/expert-requests",
+  requireAdmin,
+  adminExpertRequestRoutes(expertRequestController),
+);
 
 // AI server proxy (all routes require admin auth)
 router.use("/ai", requireAdmin, aiAdminRoutes(aiAdminController));

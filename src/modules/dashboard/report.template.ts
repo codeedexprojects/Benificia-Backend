@@ -291,6 +291,7 @@ function drawFooter(doc: PDFKit.PDFDocument) {
     // footerY+6 is inside the bottom margin area (page.height-22 > page.height-40).
     // Temporarily zero the bottom margin so PDFKit's maxY() extends to the full
     // page height, allowing text to render there without triggering a new page.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (doc.page as any).margins.bottom = 0;
 
     doc
@@ -305,6 +306,7 @@ function drawFooter(doc: PDFKit.PDFDocument) {
       );
 
     // Restore bottom margin and park the cursor safely at top of page
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (doc.page as any).margins.bottom = PAGE_MARGIN;
     doc.y = PAGE_MARGIN;
   }
