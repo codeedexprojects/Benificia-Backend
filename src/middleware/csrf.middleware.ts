@@ -17,7 +17,11 @@ const CSRF_SKIP_PATHS = [
 
 const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => env.CSRF_SECRET,
-  getSessionIdentifier: (req) => req.ip ?? "",
+  // Use the refresh-token cookie as the session identifier — it is stable for
+  // the entire login session and does not change with the user's IP address.
+  // Falling back to "" for unauthenticated requests (auth routes are skipped anyway).
+  getSessionIdentifier: (req) =>
+    (req.cookies?.["refresh_token"] as string) ?? "",
   cookieName: isProd ? "__Host-csrf" : "csrf",
   cookieOptions: {
     sameSite: isProd ? "strict" : "lax",

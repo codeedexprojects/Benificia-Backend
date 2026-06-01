@@ -12,6 +12,9 @@ import adminRoutes from "./routes/admin";
 
 const app = express();
 
+// Must be set before any middleware reads req.ip so X-Forwarded-For is trusted.
+app.set("trust proxy", 1);
+
 app.use(helmet());
 
 app.use(
@@ -19,7 +22,7 @@ app.use(
     origin: env.CORS_ORIGINS.split(",").map((o) => o.trim()),
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
   }),
 );
 
@@ -30,8 +33,6 @@ app.use(cookieParser());
 app.use(globalRateLimit);
 app.use(requestLogger);
 app.use(doubleCsrfProtection);
-
-app.set("trust proxy", 1);
 
 app.get("/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok" } });

@@ -54,6 +54,18 @@ export function errorMiddleware(
     return;
   }
 
+  // http-errors style errors (e.g. ForbiddenError from csrf-csrf) carry a
+  // numeric `status` property. Return it directly for all 4xx client errors.
+  const httpErr = err as unknown as { status?: unknown; message?: string };
+  if (
+    err instanceof Error &&
+    typeof httpErr.status === "number" &&
+    httpErr.status < 500
+  ) {
+    res.status(httpErr.status).json({ success: false, message: err.message });
+    return;
+  }
+
   // Unexpected — log with stack trace, never leak details to client
   logger.error("Unhandled error", {
     error: err instanceof Error ? err.message : String(err),
