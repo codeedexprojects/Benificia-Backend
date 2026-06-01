@@ -141,7 +141,7 @@ export class AdminRepository {
 
   // ── User management ──────────────────────────────────────────
 
-  listUsers(params: {
+  async listUsers(params: {
     skip: number;
     take: number;
     search?: string;
@@ -176,7 +176,7 @@ export class AdminRepository {
       ...(params.contacted !== undefined && { isContacted: params.contacted }),
     };
 
-    return Promise.all([
+    const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
         skip: params.skip,
@@ -199,6 +199,7 @@ export class AdminRepository {
       }),
       this.prisma.user.count({ where }),
     ]);
+    return [users, total] as const;
   }
 
   getUserDetail(userId: string) {
