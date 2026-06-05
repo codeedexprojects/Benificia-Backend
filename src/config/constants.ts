@@ -1,5 +1,5 @@
 export const OTP_EXPIRY_MINUTES = 10;
-export const OTP_MAX_ATTEMPTS = 3;
+export const OTP_MAX_ATTEMPTS = 5;
 
 // ── Admin session ────────────────────────────────────────────
 export const ADMIN_REFRESH_TTL_SECONDS = 7 * 24 * 60 * 60;

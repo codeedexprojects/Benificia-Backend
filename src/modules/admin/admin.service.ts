@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { addMinutes } from "date-fns";
-import type { SESClient } from "@aws-sdk/client-ses";
 import type { createClient } from "redis";
 import type { AdminRole } from "@prisma/client";
 import type { AdminRepository } from "./admin.repository";
@@ -51,7 +50,6 @@ export class AdminService {
   constructor(
     private readonly adminRepository: AdminRepository,
     private readonly redis: RedisClient,
-    private readonly ses: SESClient,
   ) {}
 
   async login(email: string, password: string): Promise<void> {
@@ -63,9 +61,8 @@ export class AdminService {
     }
     if (!admin.isActive) throw new ForbiddenError("Account deactivated");
 
-    // In development the static seed OTP (123456) is always active — skip
-    // generating a new OTP and sending email entirely.
-    if (env.NODE_ENV === "development") return;
+    // When MOCK_EMAIL=true skip generating a new OTP and sending email.
+    if (env.MOCK_EMAIL) return;
 
     const otp = generateOtp();
     const otpHash = await hashOtp(otp);
@@ -81,7 +78,7 @@ export class AdminService {
       otp_code: otp,
       expiry_minutes: String(OTP_EXPIRY_MINUTES),
     });
-    await sendEmail(this.ses, {
+    await sendEmail({
       to: email,
       subject: "Your Benificia Admin OTP",
       html,
