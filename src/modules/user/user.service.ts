@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { addMinutes } from "date-fns";
-import type { SESClient } from "@aws-sdk/client-ses";
 import type { createClient } from "redis";
 import { OtpChannel, OtpPurpose, type ProfileStage } from "@prisma/client";
 import type { UserRepository } from "./user.repository";
@@ -84,17 +83,16 @@ export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly redis: RedisClient,
-    private readonly ses: SESClient,
     private readonly s3: S3Client,
   ) {}
 
-  // ── Dev bypass ────────────────────────────────────────────────
-  // In development every OTP send is a no-op and every verify accepts
-  // the fixed code "123456". No DB rows are created or consumed, so the
-  // code works for any email / phone and never expires.
+  // ── Mock bypass ───────────────────────────────────────────────
+  // When MOCK_EMAIL=true every OTP send is a no-op and every verify
+  // accepts the fixed code "123456". Disabled by default so real Brevo
+  // emails are sent even in development.
 
   private readonly DEV_OTP = "123456";
-  private readonly isDev = env.NODE_ENV === "development";
+  private readonly isDev = env.MOCK_EMAIL === true;
 
   private async devVerifyEmail(
     email: string,
@@ -211,7 +209,7 @@ export class UserService {
       otp_code: otp,
       expiry_minutes: String(OTP_EXPIRY_MINUTES),
     });
-    await sendEmail(this.ses, {
+    await sendEmail({
       to: email,
       subject: "Your Benificia verification code",
       html,

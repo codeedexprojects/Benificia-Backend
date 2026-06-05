@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { prisma, redis, ses } from "../../container";
+import { prisma, redis } from "../../container";
 import { AdminContainer } from "../../modules/admin/admin.container";
 import { HealthContainer } from "../../modules/health/health.container";
 import { AiAdminController } from "../../modules/ai-admin/ai-admin.controller";
@@ -20,7 +20,7 @@ import { ExpertRequestService } from "../../modules/expert-request/expert-reques
 import { ExpertRequestController } from "../../modules/expert-request/expert-request.controller";
 
 const router = Router();
-const { adminController } = new AdminContainer(prisma, redis, ses);
+const { adminController } = new AdminContainer(prisma, redis);
 const { healthController } = new HealthContainer(prisma);
 const aiAdminController = new AiAdminController();
 const enquiryController = new EnquiryController(

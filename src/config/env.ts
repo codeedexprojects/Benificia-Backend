@@ -35,8 +35,16 @@ const envSchema = z.object({
   AWS_REGION: z.string().min(1),
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
-  AWS_SES_FROM_EMAIL: z.email(),
   AWS_S3_BUCKET: z.string().min(1),
+
+  BREVO_API_KEY: z.string().min(1),
+  BREVO_FROM_EMAIL: z.email(),
+  BREVO_FROM_NAME: z.string().default("Benificia"),
+  // Set to "true" to skip real email sending and log OTPs to console instead
+  MOCK_EMAIL: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 
   CORS_ORIGINS: z.string().default("http://localhost:30001"),
 
@@ -44,9 +52,8 @@ const envSchema = z.object({
   AI_SERVER_API_KEY: z.string().min(1),
   AI_SERVER_ADMIN_KEY: z.string().min(1),
 
-  TWOFACTOR_API_KEY: z.string().min(1),
-  // Optional: custom DLT-approved SMS template name. Defaults to the
-  // 2factor auto-generated OTP template when not set.
+  // Phone OTP via 2factor.in — optional until SMS is enabled
+  TWOFACTOR_API_KEY: z.string().optional(),
   TWOFACTOR_OTP_TEMPLATE: z.string().optional(),
 });
 

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { prisma, redis, ses, s3 } from "../../container";
+import { prisma, redis, s3 } from "../../container";
 import { UserContainer } from "../../modules/user/user.container";
 import { UploadService } from "../../modules/upload/upload.service";
 import { UploadController } from "../../modules/upload/upload.controller";
@@ -24,7 +24,7 @@ import { ExpertRequestService } from "../../modules/expert-request/expert-reques
 import { ExpertRequestController } from "../../modules/expert-request/expert-request.controller";
 
 const router = Router();
-const { userController } = new UserContainer(prisma, redis, ses, s3);
+const { userController } = new UserContainer(prisma, redis, s3);
 const uploadController = new UploadController(new UploadService(s3));
 const { healthController } = new HealthContainer(prisma);
 const { dashboardController } = new DashboardContainer(prisma);

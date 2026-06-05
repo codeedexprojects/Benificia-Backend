@@ -27,12 +27,18 @@ async function call(url: string): Promise<TwoFactorResponse> {
  * store our own hash; kept for future delivery-status lookups).
  */
 export async function sendSmsOtp(phone: string, otp: string): Promise<string> {
-  if (env.NODE_ENV === "development") {
+  if (env.MOCK_EMAIL) {
     console.log("================ MOCK SMS ================");
     console.log(`To: ${phone}`);
     console.log(`OTP: ${otp}`);
     console.log("==========================================");
     return "mock-session-id";
+  }
+
+  if (!env.TWOFACTOR_API_KEY) {
+    throw new InternalError(
+      "SMS OTP is not configured (TWOFACTOR_API_KEY missing)",
+    );
   }
 
   // Use a DLT-approved template when configured, otherwise use the
